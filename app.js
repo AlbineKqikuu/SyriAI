@@ -260,62 +260,85 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    // 1. Kosovo TV Style - Royal Blue with Deep Shadows
+    // 1. BACKGROUND LAYER: Deep Broadcast Blue Gradient
     const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
-    wallGrad.addColorStop(0, '#001b3a');
-    wallGrad.addColorStop(0.5, '#003366');
-    wallGrad.addColorStop(1, '#001b3a');
+    wallGrad.addColorStop(0, '#000814');
+    wallGrad.addColorStop(0.5, '#001d3d');
+    wallGrad.addColorStop(1, '#000814');
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Stylized Kosovo/Prishtina Silhouettes (White Translucent)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    for (let i = 0; i < w; i += 120) {
-        let height = 50 + Math.sin(i) * 30;
-        ctx.fillRect(i, h * 0.55 - height, 90, height);
-    }
-
-    // 3. Digital Grid Graphics (Classic RTK style)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    // 2. BACKGROUND GRAPHICS: Stylized Monitor Screens & Grid
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 119, 255, 0.15)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0); ctx.lineTo(i, h * 0.65);
-        ctx.stroke();
+    for (let i = 0; i < w; i += 40) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h * 0.6); ctx.stroke();
     }
 
-    // 4. THE AUTHENTIC CURVED DESK (Glass & Metal Look)
+    // Abstract "World Map" silhouette
+    ctx.fillStyle = 'rgba(0, 119, 255, 0.05)';
+    ctx.beginPath();
+    ctx.arc(w / 2, h * 0.3, w * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 3. MIDDLE LAYER: Background Monitor Glows
+    const screenGlow = ctx.createRadialGradient(w * 0.2, h * 0.3, 0, w * 0.2, h * 0.3, w * 0.2);
+    screenGlow.addColorStop(0, 'rgba(0, 122, 255, 0.1)');
+    screenGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = screenGlow;
+    ctx.fillRect(0, 0, w, h);
+
+    // 4. FOREGROUND LAYER: THE OFFICIAL NEWS DESK
+    const deskPath = new Path2D();
+    deskPath.moveTo(0, h * 0.75);
+    deskPath.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
+    deskPath.lineTo(w, h);
+    deskPath.lineTo(0, h);
+    deskPath.closePath();
+
+    // Desk Base - Glass/Metallic Gradient
     const deskGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
-    deskGrad.addColorStop(0, '#ffffff'); // Glossy top edge
-    deskGrad.addColorStop(0.05, '#dbe9f4');
-    deskGrad.addColorStop(0.4, '#1a3a5f');
+    deskGrad.addColorStop(0, '#ffffff'); // Glossy Highlight
+    deskGrad.addColorStop(0.05, '#c0c0c0');
+    deskGrad.addColorStop(0.3, '#1a1a1a');
     deskGrad.addColorStop(1, '#000000');
 
     ctx.fillStyle = deskGrad;
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.75);
-    ctx.bezierCurveTo(w * 0.25, h * 0.6, w * 0.75, h * 0.6, w, h * 0.75);
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fill(deskPath);
 
-    // Desk LED Accent (Electric Blue Glow)
+    // 5. THE REALISM KEY: REFLECTIONS ON DESK
+    ctx.save();
+    ctx.clip(deskPath);
+    ctx.globalAlpha = 0.15;
+    // Draw a flipped and shifted version of the background graphics as a "reflection"
     ctx.strokeStyle = '#007aff';
-    ctx.lineWidth = 5;
+    for (let i = 0; i < w; i += 60) {
+        ctx.beginPath();
+        ctx.moveTo(i, h * 0.65);
+        ctx.lineTo(i + (i - w / 2) * 0.2, h);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // 6. ACCENT LIGHTING: Desk LED & Glow
+    ctx.strokeStyle = '#007aff';
+    ctx.lineWidth = 4;
     ctx.shadowBlur = 20;
     ctx.shadowColor = '#007aff';
     ctx.beginPath();
     ctx.moveTo(0, h * 0.75);
-    ctx.bezierCurveTo(w * 0.25, h * 0.6, w * 0.75, h * 0.6, w, h * 0.75);
+    ctx.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // 5. Central Logo/Map Silhouette
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-    ctx.beginPath();
-    ctx.arc(w / 2, h * 0.3, w * 0.25, 0, Math.PI * 2);
-    ctx.fill();
+    // 7. FINAL POLISH: Vignette Effect
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w / 2);
+    vignette.addColorStop(0, 'transparent');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
 }
 
 // MediaPipe Face Mesh Setup
