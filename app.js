@@ -260,7 +260,7 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    // 1. Deep Blue Studio Background
+    // 1. Studio Wall Gradient (Deep Night Blue)
     const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
     wallGrad.addColorStop(0, '#050510');
     wallGrad.addColorStop(0.5, '#0a192f');
@@ -268,27 +268,28 @@ function drawProfessionalStudio(ctx, w, h) {
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Large Stylized News Pattern
-    ctx.strokeStyle = 'rgba(0, 122, 255, 0.15)';
+    // 2. Add abstract broadcast patterns (Digital Grid/World Map Feel)
+    ctx.strokeStyle = 'rgba(0, 122, 255, 0.1)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 80) {
+    for (let i = 0; i < w; i += 60) {
         ctx.beginPath();
         ctx.moveTo(i, 0); ctx.lineTo(i, h);
         ctx.stroke();
     }
-    for (let j = 0; j < h; j += 80) {
+    for (let j = 0; j < h; j += 60) {
         ctx.beginPath();
         ctx.moveTo(0, j); ctx.lineTo(w, j);
         ctx.stroke();
     }
 
-    // 3. Central "Live" World Map
-    ctx.fillStyle = 'rgba(0, 122, 255, 0.05)';
-    ctx.beginPath();
-    ctx.ellipse(w / 2, h / 2, w / 2.5, h / 3.5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // 3. Central "News" Glow
+    const glow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    glow.addColorStop(0, 'rgba(0, 122, 255, 0.15)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
 
-    // 4. REAL BROADCAST DESK (3D Perspective)
+    // 4. THE NEWS DESK (3D Perspective)
     const deskGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
     deskGrad.addColorStop(0, '#1c1c1c');
     deskGrad.addColorStop(0.3, '#333333');
@@ -296,19 +297,19 @@ function drawProfessionalStudio(ctx, w, h) {
 
     ctx.fillStyle = deskGrad;
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.75); // Left edge
+    ctx.moveTo(0, h * 0.75); // Left bottom
     ctx.lineTo(w * 0.2, h * 0.65); // Top desk left
     ctx.lineTo(w * 0.8, h * 0.65); // Top desk right
-    ctx.lineTo(w, h * 0.75); // Right edge
-    ctx.lineTo(w, h); // Bottom right
-    ctx.lineTo(0, h); // Bottom left
+    ctx.lineTo(w, h * 0.75); // Right bottom
+    ctx.lineTo(w, h); // Fill to bottom
+    ctx.lineTo(0, h);
     ctx.closePath();
     ctx.fill();
 
-    // Desk accent lighting
+    // Desk accent lighting (Neon Blue)
     ctx.strokeStyle = '#007aff';
     ctx.lineWidth = 4;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 15;
     ctx.shadowColor = '#007aff';
     ctx.beginPath();
     ctx.moveTo(0, h * 0.75);
@@ -316,7 +317,7 @@ function drawProfessionalStudio(ctx, w, h) {
     ctx.lineTo(w * 0.8, h * 0.65);
     ctx.lineTo(w, h * 0.75);
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = 0; // Reset shadow
 }
 
 // MediaPipe Face Mesh Setup
@@ -393,10 +394,10 @@ fileUpload.addEventListener('change', async (e) => {
         reader.onload = async function () {
             try {
                 const typedArray = new Uint8Array(this.result);
-                // Correct way to initialize PDF.js for text extraction
+                // Enhanced robust way to initialize PDF.js for text extraction
                 const loadingTask = pdfjsLib.getDocument({
                     data: typedArray,
-                    disableFontFace: true, // Prevents font loading issues
+                    disableFontFace: true,
                     nativeImageDecoderSupport: 'none'
                 });
                 const pdf = await loadingTask.promise;
@@ -408,18 +409,19 @@ fileUpload.addEventListener('change', async (e) => {
                     fullText += pageText + "\n\n";
                 }
 
-                if (fullText.trim().length === 0) {
-                    throw new Error("PDF seems empty or contains only images.");
+                if (fullText.trim().length < 5) {
+                    throw new Error("PDF nuk ka tekst (mund të jetë vetëm foto). Shkarkoni një PDF me tekst.");
                 }
 
                 scriptInput.value = fullText.trim();
-                uploadTrigger.innerText = "✅ PDF u ngarkua";
-                // Trigger an event to let the app know text has changed
+                uploadTrigger.innerText = "✅ U ngarkua!";
+                // CRITICAL: Force update of teleprompter data
                 scriptInput.dispatchEvent(new Event('input'));
+                renderScript(scriptInput.value.trim().split(/\s+/));
             } catch (err) {
-                console.error("PDF Library Error:", err);
-                alert("PDF nuk u lexua. Mund të jetë vetëm foto pa tekst. Provoni një tjetër.");
-                uploadTrigger.innerText = "❌ Gabim!";
+                console.error("Detailed PDF Error:", err);
+                alert("GABIM: " + err.message);
+                uploadTrigger.innerText = "❌ Provoni përsëri";
             }
         };
         reader.readAsArrayBuffer(file);
