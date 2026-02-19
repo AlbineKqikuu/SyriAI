@@ -216,6 +216,16 @@ const studioBgBtn = document.getElementById('studio-bg-btn');
 const recordBtn = document.getElementById('record-btn');
 const fileUpload = document.getElementById('file-upload');
 const uploadTrigger = document.getElementById('upload-trigger');
+const connectionStatus = document.getElementById('connection-status');
+
+// 1. INITIALIZE STUDIO BACKGROUND IMAGE
+const studioBgImg = new Image();
+studioBgImg.src = 'news_bg.jpg';
+let bgLoaded = false;
+studioBgImg.onload = () => { bgLoaded = true; };
+
+let stream;
+let recorder;
 
 // PDF.js Worker Setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
@@ -227,8 +237,7 @@ let mediaRecorder;
 let recordedChunks = [];
 
 // Load Studio Background
-const studioImg = new Image();
-studioImg.src = 'virtual_news_studio.png';
+// The previous studioImg variable is replaced by studioBgImg and bgLoaded logic.
 
 // Selfie Segmentation Setup
 const selfieSegmentation = new SelfieSegmentation({
@@ -260,79 +269,47 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    const time = Date.now() * 0.001;
-
-    // 1. BACKGROUND: Deep Spatial Blue
-    const spaceGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w);
-    spaceGrad.addColorStop(0, '#0a0a2a');
-    spaceGrad.addColorStop(1, '#000005');
-    ctx.fillStyle = spaceGrad;
-    ctx.fillRect(0, 0, w, h);
-
-    // 2. 3D PERSPECTIVE GRID FLOOR
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 0, 255, 0.15)'; // Magenta grid
-    ctx.lineWidth = 1;
-    const horizon = h * 0.6;
-    for (let i = -w; i < w * 2; i += 60) {
-        ctx.beginPath();
-        ctx.moveTo(w / 2, horizon);
-        ctx.lineTo(i, h);
-        ctx.stroke();
+    if (bgLoaded) {
+        // Draw the user provided high-quality news background
+        ctx.drawImage(studioBgImg, 0, 0, w, h);
+    } else {
+        // Fallback to high-end procedural background if image fails
+        const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
+        wallGrad.addColorStop(0, '#000814');
+        wallGrad.addColorStop(0.5, '#001d3d');
+        wallGrad.addColorStop(1, '#000814');
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(0, 0, w, h);
     }
-    for (let j = 0; j < 10; j++) {
-        let y = horizon + Math.pow(j / 10, 2) * (h - horizon);
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-    }
-    ctx.restore();
 
-    // 3. CONCENTRIC NEON RINGS (Circular Motion)
-    ctx.save();
-    ctx.translate(w / 2, h * 0.4);
-    ctx.rotate(time * 0.1);
-    for (let r = 0; r < 3; r++) {
-        ctx.strokeStyle = r % 2 === 0 ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255, 0, 255, 0.2)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, w * 0.3 + r * 20, h * 0.1, 0, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-    ctx.restore();
+    // Overlay the Official Desk for depth and realism
+    const deskPath = new Path2D();
+    deskPath.moveTo(0, h * 0.75);
+    deskPath.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
+    deskPath.lineTo(w, h);
+    deskPath.lineTo(0, h);
+    deskPath.closePath();
 
-    // 4. THE FUTURISTIC BROADCAST GLOBE (Wireframe Particle Style)
-    ctx.save();
-    ctx.translate(w / 2, h * 0.4);
-    ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-        ctx.beginPath();
-        ctx.ellipse(0, 0, w * 0.15, h * 0.25, (time * 0.2) + (i * Math.PI / 4), 0, Math.PI * 2);
-        ctx.stroke();
-    }
-    // Globe Core Glow
-    const coreGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.15);
-    coreGlow.addColorStop(0, 'rgba(0, 122, 255, 0.2)');
-    coreGlow.addColorStop(1, 'transparent');
-    ctx.fillStyle = coreGlow;
+    // Desk Base - Glass/Metallic Gradient
+    const deskGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+    deskGrad.addColorStop(0, '#ffffff'); // Glossy Highlight
+    deskGrad.addColorStop(0.05, '#c0c0c0');
+    deskGrad.addColorStop(0.3, '#1a1a1a');
+    deskGrad.addColorStop(1, '#000000');
+
+    ctx.fillStyle = deskGrad;
+    ctx.fill(deskPath);
+
+    // Subtle LED Accent underneath the desk
+    ctx.strokeStyle = '#007aff';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#007aff';
     ctx.beginPath();
-    ctx.arc(0, 0, w * 0.15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 5. SIDE MONITOR GRAPHICS
-    ctx.fillStyle = 'rgba(0, 122, 255, 0.05)';
-    ctx.fillRect(w * 0.05, h * 0.1, w * 0.15, h * 0.3);
-    ctx.fillRect(w * 0.8, h * 0.1, w * 0.15, h * 0.3);
-
-    // 6. ATMOSPHERIC VIGNETTE
-    const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.4, w / 2, h / 2, w / 2);
-    vignette.addColorStop(0, 'transparent');
-    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, w, h);
+    ctx.moveTo(0, h * 0.75);
+    ctx.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 }
 
 // MediaPipe Face Mesh Setup
@@ -425,7 +402,7 @@ fileUpload.addEventListener('change', async (e) => {
                 }
 
                 if (fullText.trim().length < 5) {
-                    throw new Error("PDF nuk ka tekst (mund të jetë vetëm foto). Shkarkoni një PDF me tekst.");
+                    throw new Error("Ky PDF nuk ka tekst të lexueshëm (mund të jetë vetëm foto). Shkarkoni një PDF me tekst.");
                 }
 
                 scriptInput.value = fullText.trim();
