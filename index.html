@@ -9,8 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- MediaPipe Face Mesh -->
+    <!-- MediaPipe Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"
+        crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
         crossorigin="anonymous"></script>
@@ -42,10 +44,18 @@
 
         <aside class="controls-sidebar">
             <div class="video-preview">
-                <video id="webcam-feed" autoplay playsinline></video>
+                <video id="webcam-feed" autoplay playsinline style="display:none;"></video>
+                <canvas id="output-canvas"></canvas>
                 <canvas id="gaze-canvas"
                     style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none;"></canvas>
                 <div id="ai-status">Gaze Tracking: Inactive</div>
+                <div id="mood-feedback" class="mood-overlay">Mood: Calibrating...</div>
+            </div>
+
+            <div class="studio-controls">
+                <button id="blur-btn" class="studio-btn">Blur Sfondin</button>
+                <button id="studio-bg-btn" class="studio-btn">Studio Virtuale</button>
+                <button id="record-btn" class="record-btn">🔴 RECORD</button>
             </div>
 
             <div class="control-panel">

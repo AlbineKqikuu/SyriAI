@@ -204,87 +204,192 @@ function scrollToWord(index) {
         });
     }
 }
-// MediaPipe Face Mesh Setup
+// Video and Canvas Overlay Setup
+const outputCanvas = document.getElementById('output-canvas');
+const outCtx = outputCanvas.getContext('2d');
 const gazeCanvas = document.getElementById('gaze-canvas');
 const gazeCtx = gazeCanvas.getContext('2d');
 const aiStatus = document.getElementById('ai-status');
+const moodFeedback = document.getElementById('mood-feedback');
+const blurBtn = document.getElementById('blur-btn');
+const studioBgBtn = document.getElementById('studio-bg-btn');
+const recordBtn = document.getElementById('record-btn');
 
-const faceMesh = new FaceMesh({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-    }
+let isBlurActive = false;
+let isStudioBgActive = false;
+let isRecording = false;
+let mediaRecorder;
+let recordedChunks = [];
+
+// Load Studio Background
+const studioImg = new Image();
+studioImg.src = 'virtual_news_studio.png';
+
+// Selfie Segmentation Setup
+const selfieSegmentation = new SelfieSegmentation({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
 });
+selfieSegmentation.setOptions({ modelSelection: 1 });
+selfieSegmentation.onResults(onSegmentationResults);
 
+function onSegmentationResults(results) {
+    outCtx.save();
+    outCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+    outCtx.drawImage(results.segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
+
+    outCtx.globalCompositeOperation = 'source-out';
+    if (isBlurActive) {
+        outCtx.filter = 'blur(15px)';
+        outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+        outCtx.filter = 'none';
+    } else if (isStudioBgActive) {
+        if (studioImg.complete && studioImg.naturalWidth !== 0) {
+            outCtx.drawImage(studioImg, 0, 0, outputCanvas.width, outputCanvas.height);
+        } else {
+            const grad = outCtx.createRadialGradient(outputCanvas.width / 2, outputCanvas.height / 2, 0, outputCanvas.width / 2, outputCanvas.height / 2, outputCanvas.height);
+            grad.addColorStop(0, '#1a1a24');
+            grad.addColorStop(1, '#0b0b0f');
+            outCtx.fillStyle = grad;
+            outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+        }
+    } else {
+        outCtx.fillStyle = 'black';
+        outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+    }
+
+    outCtx.globalCompositeOperation = 'destination-atop';
+    outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+    outCtx.restore();
+}
+
+// MediaPipe Face Mesh Setup
+const faceMesh = new FaceMesh({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+});
 faceMesh.setOptions({
     maxNumFaces: 1,
     refineLandmarks: true,
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
+faceMesh.onResults(onFaceResults);
 
-faceMesh.onResults(onGazeResults);
-
-function onGazeResults(results) {
+function onFaceResults(results) {
     gazeCtx.clearRect(0, 0, gazeCanvas.width, gazeCanvas.height);
-
     if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
         aiStatus.innerText = "Gaze Tracking: Active";
         aiStatus.style.color = "var(--success-color)";
 
-        // Extract Iris Landmarks (simplified for feedback)
-        // Left Eye Iris: landmarks[468]
-        // Right Eye Iris: landmarks[473]
-        const leftIris = landmarks[468];
-        const rightIris = landmarks[473];
-
-        // Draw HUD overlay for thesis demonstration
-        drawGazeHUD(leftIris, rightIris);
+        drawGazeHUD(landmarks[468], landmarks[473]);
+        updateMood(landmarks);
     } else {
         aiStatus.innerText = "Gaze Tracking: Searching...";
         aiStatus.style.color = "var(--danger-color)";
+        moodFeedback.innerText = "Mood: Calibrating...";
     }
 }
 
 function drawGazeHUD(left, right) {
     const w = gazeCanvas.width;
     const h = gazeCanvas.height;
-
     gazeCtx.strokeStyle = "rgba(0, 122, 255, 0.5)";
     gazeCtx.lineWidth = 1;
-
-    // Draw iris points
     gazeCtx.fillStyle = "var(--accent-color)";
     gazeCtx.beginPath();
     gazeCtx.arc(left.x * w, left.y * h, 3, 0, Math.PI * 2);
     gazeCtx.arc(right.x * w, right.y * h, 3, 0, Math.PI * 2);
     gazeCtx.fill();
 
-    // Check if looking at camera (near 0.5 center)
     const isLookingCentrally = Math.abs(left.x - 0.5) < 0.05 && Math.abs(left.y - 0.5) < 0.15;
-
-    if (!isLookingCentrally) {
-        gazeCtx.fillStyle = "rgba(255, 59, 48, 0.2)";
-        gazeCtx.font = "bold 12px Inter";
-        gazeCtx.fillText("CORRECTING GAZE...", 10, 25);
-    } else {
-        gazeCtx.fillStyle = "rgba(52, 199, 89, 0.4)";
-        gazeCtx.fillText("EYE CONTACT ALIGNED", 10, 25);
-    }
+    gazeCtx.fillStyle = isLookingCentrally ? "rgba(52, 199, 89, 0.6)" : "rgba(255, 59, 48, 0.6)";
+    gazeCtx.font = "bold 12px Inter";
+    gazeCtx.fillText(isLookingCentrally ? "EYE CONTACT ALIGNED" : "CORRECTING GAZE...", 10, 25);
 }
 
-// Start MediaPipe when Start button is clicked
-startBtn.addEventListener('click', () => {
-    // ... existing start logic ...
+function updateMood(landmarks) {
+    const mouthWidth = Math.sqrt(Math.pow(landmarks[291].x - landmarks[61].x, 2) + Math.pow(landmarks[291].y - landmarks[61].y, 2));
+    const mouthHeight = Math.abs(landmarks[14].y - landmarks[13].y);
+    const smileRatio = mouthWidth / (mouthHeight || 0.1);
+
+    let feedback = "Mood: Neutral";
+    if (smileRatio > 4.5) feedback = "Mood: Profesionist & Buzëqeshur 😊";
+    else if (mouthHeight > 0.04) feedback = "Mood: Duke folur rrjedhshëm 🎙️";
+
+    const isLookingCentrally = Math.abs(landmarks[468].x - 0.5) < 0.06;
+    if (!isLookingCentrally) feedback += " | SHIKO KAMERËN! 👁️";
+
+    moodFeedback.innerText = feedback;
+}
+
+// Recording Logic
+recordBtn.addEventListener('click', () => {
+    if (!isRecording) startRecording();
+    else stopRecording();
+});
+
+function startRecording() {
+    recordedChunks = [];
+    const stream = outputCanvas.captureStream(30);
+    if (video.srcObject && video.srcObject.getAudioTracks().length > 0) {
+        stream.addTrack(video.srcObject.getAudioTracks()[0]);
+    }
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    mediaRecorder.ondataavailable = (e) => recordedChunks.push(e.data);
+    mediaRecorder.onstop = saveRecording;
+    mediaRecorder.start();
+    isRecording = true;
+    recordBtn.innerText = "🛑 STOP REC";
+    recordBtn.classList.add('recording');
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+    recordBtn.innerText = "🔴 RECORD";
+    recordBtn.classList.remove('recording');
+}
+
+function saveRecording() {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SyriAI_Session_${new Date().getTime()}.webm`;
+    a.click();
+}
+
+// Button Listeners
+blurBtn.addEventListener('click', () => {
+    isBlurActive = !isBlurActive;
+    isStudioBgActive = false;
+    blurBtn.classList.toggle('active', isBlurActive);
+    studioBgBtn.classList.remove('active');
+});
+
+studioBgBtn.addEventListener('click', () => {
+    isStudioBgActive = !isStudioBgActive;
+    isBlurActive = false;
+    studioBgBtn.classList.toggle('active', isStudioBgActive);
+    blurBtn.classList.remove('active');
+});
+
+// Start MediaPipe
+startBtn.addEventListener('click', async () => {
+    // ... (Previous logic remains)
+
+    outputCanvas.width = 640;
+    outputCanvas.height = 480;
+    gazeCanvas.width = 640;
+    gazeCanvas.height = 480;
+
     const camera = new Camera(video, {
         onFrame: async () => {
+            await selfieSegmentation.send({ image: video });
             await faceMesh.send({ image: video });
         },
         width: 640,
         height: 480
     });
     camera.start();
-
-    gazeCanvas.width = video.clientWidth;
-    gazeCanvas.height = video.clientHeight;
 });
