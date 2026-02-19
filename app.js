@@ -384,24 +384,33 @@ fileUpload.addEventListener('change', async (e) => {
         reader.onload = async function () {
             try {
                 const typedArray = new Uint8Array(this.result);
+                // Correct way to initialize PDF.js for text extraction
                 const loadingTask = pdfjsLib.getDocument({
                     data: typedArray,
-                    useWorkerFetch: false,
-                    isEvalSupported: false
+                    disableFontFace: true, // Prevents font loading issues
+                    nativeImageDecoderSupport: 'none'
                 });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(" ") + " ";
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    fullText += pageText + "\n\n";
                 }
+
+                if (fullText.trim().length === 0) {
+                    throw new Error("PDF seems empty or contains only images.");
+                }
+
                 scriptInput.value = fullText.trim();
                 uploadTrigger.innerText = "✅ PDF u ngarkua";
+                // Trigger an event to let the app know text has changed
                 scriptInput.dispatchEvent(new Event('input'));
             } catch (err) {
-                console.error("PDF Error:", err);
-                uploadTrigger.innerText = "❌ Gabim PDF";
+                console.error("PDF Library Error:", err);
+                alert("PDF nuk u lexua. Mund të jetë vetëm foto pa tekst. Provoni një tjetër.");
+                uploadTrigger.innerText = "❌ Gabim!";
             }
         };
         reader.readAsArrayBuffer(file);

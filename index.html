@@ -66,15 +66,15 @@
             </div>
 
             <div class="control-panel">
-                <div class="control-group">
-                    <label>Madhësia e Shkrimit</label>
-                    <input type="range" id="font-size" min="2" max="6" step="0.5" value="3.5">
+                <div class="button-grid">
+                    <button id="start-btn">Fillo LIVE</button>
+                    <button id="stop-btn" class="secondary">Ndalo</button>
                 </div>
 
                 <div class="control-group">
-                    <label>Ngarkoni Skriptin (PDF, Word, Foto)</label>
+                    <label>Ngarkoni Skriptin (PDF, Word)</label>
                     <div class="upload-wrapper">
-                        <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.png" style="display:none;">
+                        <input type="file" id="file-upload" accept=".pdf,.docx" style="display:none;">
                         <button id="upload-trigger" class="secondary">📤 Ngarko File</button>
                     </div>
                 </div>
@@ -84,9 +84,9 @@
                     <textarea id="script-input" placeholder="Ngjisni tekstin tuaj këtu..."></textarea>
                 </div>
 
-                <div class="button-grid">
-                    <button id="start-btn">Fillo LIVE</button>
-                    <button id="stop-btn" class="secondary">Ndalo</button>
+                <div class="control-group">
+                    <label>Madhësia e Shkrimit</label>
+                    <input type="range" id="font-size" min="2" max="6" step="0.5" value="3.5">
                 </div>
             </div>
         </aside>
