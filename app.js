@@ -260,64 +260,62 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    // 1. Studio Wall Gradient (Deep Night Blue)
+    // 1. Kosovo TV Style - Royal Blue with Deep Shadows
     const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
-    wallGrad.addColorStop(0, '#050510');
-    wallGrad.addColorStop(0.5, '#0a192f');
-    wallGrad.addColorStop(1, '#050510');
+    wallGrad.addColorStop(0, '#001b3a');
+    wallGrad.addColorStop(0.5, '#003366');
+    wallGrad.addColorStop(1, '#001b3a');
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Add abstract broadcast patterns (Digital Grid/World Map Feel)
-    ctx.strokeStyle = 'rgba(0, 122, 255, 0.1)';
+    // 2. Stylized Kosovo/Prishtina Silhouettes (White Translucent)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    for (let i = 0; i < w; i += 120) {
+        let height = 50 + Math.sin(i) * 30;
+        ctx.fillRect(i, h * 0.55 - height, 90, height);
+    }
+
+    // 3. Digital Grid Graphics (Classic RTK style)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 60) {
+    for (let i = 0; i < w; i += 50) {
         ctx.beginPath();
-        ctx.moveTo(i, 0); ctx.lineTo(i, h);
-        ctx.stroke();
-    }
-    for (let j = 0; j < h; j += 60) {
-        ctx.beginPath();
-        ctx.moveTo(0, j); ctx.lineTo(w, j);
+        ctx.moveTo(i, 0); ctx.lineTo(i, h * 0.65);
         ctx.stroke();
     }
 
-    // 3. Central "News" Glow
-    const glow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-    glow.addColorStop(0, 'rgba(0, 122, 255, 0.15)');
-    glow.addColorStop(1, 'transparent');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, w, h);
-
-    // 4. THE NEWS DESK (3D Perspective)
-    const deskGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
-    deskGrad.addColorStop(0, '#1c1c1c');
-    deskGrad.addColorStop(0.3, '#333333');
+    // 4. THE AUTHENTIC CURVED DESK (Glass & Metal Look)
+    const deskGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+    deskGrad.addColorStop(0, '#ffffff'); // Glossy top edge
+    deskGrad.addColorStop(0.05, '#dbe9f4');
+    deskGrad.addColorStop(0.4, '#1a3a5f');
     deskGrad.addColorStop(1, '#000000');
 
     ctx.fillStyle = deskGrad;
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.75); // Left bottom
-    ctx.lineTo(w * 0.2, h * 0.65); // Top desk left
-    ctx.lineTo(w * 0.8, h * 0.65); // Top desk right
-    ctx.lineTo(w, h * 0.75); // Right bottom
-    ctx.lineTo(w, h); // Fill to bottom
+    ctx.moveTo(0, h * 0.75);
+    ctx.bezierCurveTo(w * 0.25, h * 0.6, w * 0.75, h * 0.6, w, h * 0.75);
+    ctx.lineTo(w, h);
     ctx.lineTo(0, h);
     ctx.closePath();
     ctx.fill();
 
-    // Desk accent lighting (Neon Blue)
+    // Desk LED Accent (Electric Blue Glow)
     ctx.strokeStyle = '#007aff';
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 15;
+    ctx.lineWidth = 5;
+    ctx.shadowBlur = 20;
     ctx.shadowColor = '#007aff';
     ctx.beginPath();
     ctx.moveTo(0, h * 0.75);
-    ctx.lineTo(w * 0.2, h * 0.65);
-    ctx.lineTo(w * 0.8, h * 0.65);
-    ctx.lineTo(w, h * 0.75);
+    ctx.bezierCurveTo(w * 0.25, h * 0.6, w * 0.75, h * 0.6, w, h * 0.75);
     ctx.stroke();
-    ctx.shadowBlur = 0; // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // 5. Central Logo/Map Silhouette
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.beginPath();
+    ctx.arc(w / 2, h * 0.3, w * 0.25, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 // MediaPipe Face Mesh Setup
@@ -415,9 +413,14 @@ fileUpload.addEventListener('change', async (e) => {
 
                 scriptInput.value = fullText.trim();
                 uploadTrigger.innerText = "✅ U ngarkua!";
+
                 // CRITICAL: Force update of teleprompter data
+                const newWords = scriptInput.value.trim().split(/\s+/);
+                renderScript(newWords);
+                words = newWords; // Update global words array
+                currentWordIndex = 0; // Reset index
+
                 scriptInput.dispatchEvent(new Event('input'));
-                renderScript(scriptInput.value.trim().split(/\s+/));
             } catch (err) {
                 console.error("Detailed PDF Error:", err);
                 alert("GABIM: " + err.message);
