@@ -16,6 +16,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
         crossorigin="anonymous"></script>
+    <!-- File Processing Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 </head>
 
 <body>
@@ -66,6 +69,14 @@
                 <div class="control-group">
                     <label>Madhësia e Shkrimit</label>
                     <input type="range" id="font-size" min="2" max="6" step="0.5" value="3.5">
+                </div>
+
+                <div class="control-group">
+                    <label>Ngarkoni Skriptin (PDF, Word, Foto)</label>
+                    <div class="upload-wrapper">
+                        <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.png" style="display:none;">
+                        <button id="upload-trigger" class="secondary">📤 Ngarko File</button>
+                    </div>
                 </div>
 
                 <div class="control-group">

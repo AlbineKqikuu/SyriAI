@@ -214,6 +214,8 @@ const moodFeedback = document.getElementById('mood-feedback');
 const blurBtn = document.getElementById('blur-btn');
 const studioBgBtn = document.getElementById('studio-bg-btn');
 const recordBtn = document.getElementById('record-btn');
+const fileUpload = document.getElementById('file-upload');
+const uploadTrigger = document.getElementById('upload-trigger');
 
 let isBlurActive = false;
 let isStudioBgActive = false;
@@ -246,11 +248,22 @@ function onSegmentationResults(results) {
         if (studioImg.complete && studioImg.naturalWidth !== 0) {
             outCtx.drawImage(studioImg, 0, 0, outputCanvas.width, outputCanvas.height);
         } else {
+            // High-end professional fallback gradient
             const grad = outCtx.createRadialGradient(outputCanvas.width / 2, outputCanvas.height / 2, 0, outputCanvas.width / 2, outputCanvas.height / 2, outputCanvas.height);
-            grad.addColorStop(0, '#1a1a24');
-            grad.addColorStop(1, '#0b0b0f');
+            grad.addColorStop(0, '#2c3e50'); // Deep Slate Blue
+            grad.addColorStop(1, '#000000'); // Black
             outCtx.fillStyle = grad;
             outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+            // Add grid line overlay for "Studio" feel
+            outCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            outCtx.lineWidth = 1;
+            for (let i = 0; i < outputCanvas.width; i += 40) {
+                outCtx.beginPath();
+                outCtx.moveTo(i, 0);
+                outCtx.lineTo(i, outputCanvas.height);
+                outCtx.stroke();
+            }
         }
     } else {
         outCtx.fillStyle = 'black';
@@ -322,6 +335,48 @@ function updateMood(landmarks) {
     moodFeedback.innerText = feedback;
 }
 
+// File Upload Handling
+uploadTrigger.addEventListener('click', () => fileUpload.click());
+
+fileUpload.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    uploadTrigger.innerText = "⏳ Duke procesuar...";
+    const reader = new FileReader();
+
+    if (file.type === "application/pdf") {
+        reader.onload = async function () {
+            const typedArtay = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedArtay).promise;
+            let fullText = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                fullText += content.items.map(item => item.str).join(" ");
+            }
+            scriptInput.value = fullText;
+            uploadTrigger.innerText = "✅ PDF u ngarkua";
+        };
+        reader.readAsArrayBuffer(file);
+    } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        reader.onload = async function () {
+            const result = await mammoth.extractRawText({ arrayBuffer: this.result });
+            scriptInput.value = result.value;
+            uploadTrigger.innerText = "✅ Word u ngarkua";
+        };
+        reader.readAsArrayBuffer(file);
+    } else if (file.type.startsWith("image/")) {
+        // Very basic "mock" image extract - images normally need OCR like Tesseract.js
+        // For now, prompt the user.
+        alert("Për foto rekomandojmë formatin PDF ose Word. OCR do të vijë së shpejti.");
+        uploadTrigger.innerText = "📤 Ngarko File";
+    } else {
+        alert("Format i pambështetur. Te lutem përdor PDF ose Word.");
+        uploadTrigger.innerText = "📤 Ngarko File";
+    }
+});
+
 // Recording Logic
 recordBtn.addEventListener('click', () => {
     if (!isRecording) startRecording();
@@ -375,7 +430,7 @@ studioBgBtn.addEventListener('click', () => {
 });
 
 // Start MediaPipe
-startBtn.addEventListener('click', async () => {
+startBtn.addEventListener('click', () => {
     // ... (Previous logic remains)
 
     outputCanvas.width = 640;
