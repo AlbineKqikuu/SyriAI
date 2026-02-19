@@ -260,83 +260,77 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    // 1. BACKGROUND LAYER: Deep Broadcast Blue Gradient
-    const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
-    wallGrad.addColorStop(0, '#000814');
-    wallGrad.addColorStop(0.5, '#001d3d');
-    wallGrad.addColorStop(1, '#000814');
-    ctx.fillStyle = wallGrad;
+    const time = Date.now() * 0.001;
+
+    // 1. BACKGROUND: Deep Spatial Blue
+    const spaceGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w);
+    spaceGrad.addColorStop(0, '#0a0a2a');
+    spaceGrad.addColorStop(1, '#000005');
+    ctx.fillStyle = spaceGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. BACKGROUND GRAPHICS: Stylized Monitor Screens & Grid
+    // 2. 3D PERSPECTIVE GRID FLOOR
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 119, 255, 0.15)';
+    ctx.strokeStyle = 'rgba(255, 0, 255, 0.15)'; // Magenta grid
     ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 40) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h * 0.6); ctx.stroke();
-    }
-
-    // Abstract "World Map" silhouette
-    ctx.fillStyle = 'rgba(0, 119, 255, 0.05)';
-    ctx.beginPath();
-    ctx.arc(w / 2, h * 0.3, w * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 3. MIDDLE LAYER: Background Monitor Glows
-    const screenGlow = ctx.createRadialGradient(w * 0.2, h * 0.3, 0, w * 0.2, h * 0.3, w * 0.2);
-    screenGlow.addColorStop(0, 'rgba(0, 122, 255, 0.1)');
-    screenGlow.addColorStop(1, 'transparent');
-    ctx.fillStyle = screenGlow;
-    ctx.fillRect(0, 0, w, h);
-
-    // 4. FOREGROUND LAYER: THE OFFICIAL NEWS DESK
-    const deskPath = new Path2D();
-    deskPath.moveTo(0, h * 0.75);
-    deskPath.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
-    deskPath.lineTo(w, h);
-    deskPath.lineTo(0, h);
-    deskPath.closePath();
-
-    // Desk Base - Glass/Metallic Gradient
-    const deskGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
-    deskGrad.addColorStop(0, '#ffffff'); // Glossy Highlight
-    deskGrad.addColorStop(0.05, '#c0c0c0');
-    deskGrad.addColorStop(0.3, '#1a1a1a');
-    deskGrad.addColorStop(1, '#000000');
-
-    ctx.fillStyle = deskGrad;
-    ctx.fill(deskPath);
-
-    // 5. THE REALISM KEY: REFLECTIONS ON DESK
-    ctx.save();
-    ctx.clip(deskPath);
-    ctx.globalAlpha = 0.15;
-    // Draw a flipped and shifted version of the background graphics as a "reflection"
-    ctx.strokeStyle = '#007aff';
-    for (let i = 0; i < w; i += 60) {
+    const horizon = h * 0.6;
+    for (let i = -w; i < w * 2; i += 60) {
         ctx.beginPath();
-        ctx.moveTo(i, h * 0.65);
-        ctx.lineTo(i + (i - w / 2) * 0.2, h);
+        ctx.moveTo(w / 2, horizon);
+        ctx.lineTo(i, h);
+        ctx.stroke();
+    }
+    for (let j = 0; j < 10; j++) {
+        let y = horizon + Math.pow(j / 10, 2) * (h - horizon);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
         ctx.stroke();
     }
     ctx.restore();
 
-    // 6. ACCENT LIGHTING: Desk LED & Glow
-    ctx.strokeStyle = '#007aff';
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#007aff';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.75);
-    ctx.bezierCurveTo(w * 0.2, h * 0.62, w * 0.8, h * 0.62, w, h * 0.75);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    // 3. CONCENTRIC NEON RINGS (Circular Motion)
+    ctx.save();
+    ctx.translate(w / 2, h * 0.4);
+    ctx.rotate(time * 0.1);
+    for (let r = 0; r < 3; r++) {
+        ctx.strokeStyle = r % 2 === 0 ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255, 0, 255, 0.2)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w * 0.3 + r * 20, h * 0.1, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.restore();
 
-    // 7. FINAL POLISH: Vignette Effect
-    const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w / 2);
+    // 4. THE FUTURISTIC BROADCAST GLOBE (Wireframe Particle Style)
+    ctx.save();
+    ctx.translate(w / 2, h * 0.4);
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w * 0.15, h * 0.25, (time * 0.2) + (i * Math.PI / 4), 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    // Globe Core Glow
+    const coreGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.15);
+    coreGlow.addColorStop(0, 'rgba(0, 122, 255, 0.2)');
+    coreGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = coreGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, w * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 5. SIDE MONITOR GRAPHICS
+    ctx.fillStyle = 'rgba(0, 122, 255, 0.05)';
+    ctx.fillRect(w * 0.05, h * 0.1, w * 0.15, h * 0.3);
+    ctx.fillRect(w * 0.8, h * 0.1, w * 0.15, h * 0.3);
+
+    // 6. ATMOSPHERIC VIGNETTE
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.4, w / 2, h / 2, w / 2);
     vignette.addColorStop(0, 'transparent');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.6)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, w, h);
 }
@@ -438,7 +432,7 @@ fileUpload.addEventListener('change', async (e) => {
                 uploadTrigger.innerText = "✅ U ngarkua!";
 
                 // CRITICAL: Force update of teleprompter data
-                const newWords = scriptInput.value.trim().split(/\s+/);
+                const newWords = scriptInput.value.trim().split(/\s+/).filter(w => w.length > 0);
                 renderScript(newWords);
                 words = newWords; // Update global words array
                 currentWordIndex = 0; // Reset index
