@@ -260,54 +260,63 @@ function onSegmentationResults(results) {
 }
 
 function drawProfessionalStudio(ctx, w, h) {
-    // 1. Modern Blue Wall Gradient
+    // 1. Deep Blue Studio Background
     const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
-    wallGrad.addColorStop(0, '#0f0f1a');
-    wallGrad.addColorStop(0.5, '#16213e');
-    wallGrad.addColorStop(1, '#1a1a2e');
+    wallGrad.addColorStop(0, '#050510');
+    wallGrad.addColorStop(0.5, '#0a192f');
+    wallGrad.addColorStop(1, '#050510');
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Add abstract background patterns
-    ctx.strokeStyle = 'rgba(0, 122, 255, 0.1)';
+    // 2. Large Stylized News Pattern
+    ctx.strokeStyle = 'rgba(0, 122, 255, 0.15)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < w || i < h; i += 40) {
+    for (let i = 0; i < w; i += 80) {
         ctx.beginPath();
         ctx.moveTo(i, 0); ctx.lineTo(i, h);
         ctx.stroke();
+    }
+    for (let j = 0; j < h; j += 80) {
         ctx.beginPath();
-        ctx.moveTo(0, i); ctx.lineTo(w, i);
+        ctx.moveTo(0, j); ctx.lineTo(w, j);
         ctx.stroke();
     }
 
-    // 3. Central World Map Glow
+    // 3. Central "Live" World Map
     ctx.fillStyle = 'rgba(0, 122, 255, 0.05)';
     ctx.beginPath();
-    ctx.ellipse(w / 2, h / 2, w / 3, h / 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(w / 2, h / 2, w / 2.5, h / 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 4. Professional News Desk
+    // 4. REAL BROADCAST DESK (3D Perspective)
     const deskGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
-    deskGrad.addColorStop(0, '#2c3e50');
-    deskGrad.addColorStop(0.2, '#1a1a24');
+    deskGrad.addColorStop(0, '#1c1c1c');
+    deskGrad.addColorStop(0.3, '#333333');
     deskGrad.addColorStop(1, '#000000');
-    ctx.fillStyle = deskGrad;
 
+    ctx.fillStyle = deskGrad;
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.75);
-    ctx.bezierCurveTo(w * 0.25, h * 0.65, w * 0.75, h * 0.65, w, h * 0.75);
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
+    ctx.moveTo(0, h * 0.75); // Left edge
+    ctx.lineTo(w * 0.2, h * 0.65); // Top desk left
+    ctx.lineTo(w * 0.8, h * 0.65); // Top desk right
+    ctx.lineTo(w, h * 0.75); // Right edge
+    ctx.lineTo(w, h); // Bottom right
+    ctx.lineTo(0, h); // Bottom left
     ctx.closePath();
     ctx.fill();
 
-    // Desk edge glow
+    // Desk accent lighting
     ctx.strokeStyle = '#007aff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#007aff';
     ctx.beginPath();
     ctx.moveTo(0, h * 0.75);
-    ctx.bezierCurveTo(w * 0.25, h * 0.65, w * 0.75, h * 0.65, w, h * 0.75);
+    ctx.lineTo(w * 0.2, h * 0.65);
+    ctx.lineTo(w * 0.8, h * 0.65);
+    ctx.lineTo(w, h * 0.75);
     ctx.stroke();
+    ctx.shadowBlur = 0;
 }
 
 // MediaPipe Face Mesh Setup
