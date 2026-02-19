@@ -217,6 +217,9 @@ const recordBtn = document.getElementById('record-btn');
 const fileUpload = document.getElementById('file-upload');
 const uploadTrigger = document.getElementById('upload-trigger');
 
+// PDF.js Worker Setup
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
 let isBlurActive = false;
 let isStudioBgActive = false;
 let isRecording = false;
@@ -245,26 +248,7 @@ function onSegmentationResults(results) {
         outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
         outCtx.filter = 'none';
     } else if (isStudioBgActive) {
-        if (studioImg.complete && studioImg.naturalWidth !== 0) {
-            outCtx.drawImage(studioImg, 0, 0, outputCanvas.width, outputCanvas.height);
-        } else {
-            // High-end professional fallback gradient
-            const grad = outCtx.createRadialGradient(outputCanvas.width / 2, outputCanvas.height / 2, 0, outputCanvas.width / 2, outputCanvas.height / 2, outputCanvas.height);
-            grad.addColorStop(0, '#2c3e50'); // Deep Slate Blue
-            grad.addColorStop(1, '#000000'); // Black
-            outCtx.fillStyle = grad;
-            outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-
-            // Add grid line overlay for "Studio" feel
-            outCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-            outCtx.lineWidth = 1;
-            for (let i = 0; i < outputCanvas.width; i += 40) {
-                outCtx.beginPath();
-                outCtx.moveTo(i, 0);
-                outCtx.lineTo(i, outputCanvas.height);
-                outCtx.stroke();
-            }
-        }
+        drawProfessionalStudio(outCtx, outputCanvas.width, outputCanvas.height);
     } else {
         outCtx.fillStyle = 'black';
         outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
@@ -273,6 +257,57 @@ function onSegmentationResults(results) {
     outCtx.globalCompositeOperation = 'destination-atop';
     outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
     outCtx.restore();
+}
+
+function drawProfessionalStudio(ctx, w, h) {
+    // 1. Modern Blue Wall Gradient
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
+    wallGrad.addColorStop(0, '#0f0f1a');
+    wallGrad.addColorStop(0.5, '#16213e');
+    wallGrad.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. Add abstract background patterns
+    ctx.strokeStyle = 'rgba(0, 122, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < w || i < h; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0); ctx.lineTo(i, h);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i); ctx.lineTo(w, i);
+        ctx.stroke();
+    }
+
+    // 3. Central World Map Glow
+    ctx.fillStyle = 'rgba(0, 122, 255, 0.05)';
+    ctx.beginPath();
+    ctx.ellipse(w / 2, h / 2, w / 3, h / 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Professional News Desk
+    const deskGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
+    deskGrad.addColorStop(0, '#2c3e50');
+    deskGrad.addColorStop(0.2, '#1a1a24');
+    deskGrad.addColorStop(1, '#000000');
+    ctx.fillStyle = deskGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.75);
+    ctx.bezierCurveTo(w * 0.25, h * 0.65, w * 0.75, h * 0.65, w, h * 0.75);
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fill();
+
+    // Desk edge glow
+    ctx.strokeStyle = '#007aff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.75);
+    ctx.bezierCurveTo(w * 0.25, h * 0.65, w * 0.75, h * 0.65, w, h * 0.75);
+    ctx.stroke();
 }
 
 // MediaPipe Face Mesh Setup
@@ -347,23 +382,39 @@ fileUpload.addEventListener('change', async (e) => {
 
     if (file.type === "application/pdf") {
         reader.onload = async function () {
-            const typedArtay = new Uint8Array(this.result);
-            const pdf = await pdfjsLib.getDocument(typedArtay).promise;
-            let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                fullText += content.items.map(item => item.str).join(" ");
+            try {
+                const typedArray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument({
+                    data: typedArray,
+                    useWorkerFetch: false,
+                    isEvalSupported: false
+                });
+                const pdf = await loadingTask.promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items.map(item => item.str).join(" ") + " ";
+                }
+                scriptInput.value = fullText.trim();
+                uploadTrigger.innerText = "✅ PDF u ngarkua";
+                scriptInput.dispatchEvent(new Event('input'));
+            } catch (err) {
+                console.error("PDF Error:", err);
+                uploadTrigger.innerText = "❌ Gabim PDF";
             }
-            scriptInput.value = fullText;
-            uploadTrigger.innerText = "✅ PDF u ngarkua";
         };
         reader.readAsArrayBuffer(file);
     } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         reader.onload = async function () {
-            const result = await mammoth.extractRawText({ arrayBuffer: this.result });
-            scriptInput.value = result.value;
-            uploadTrigger.innerText = "✅ Word u ngarkua";
+            try {
+                const result = await mammoth.extractRawText({ arrayBuffer: this.result });
+                scriptInput.value = result.value;
+                uploadTrigger.innerText = "✅ Word u ngarkua";
+                scriptInput.dispatchEvent(new Event('input'));
+            } catch (err) {
+                uploadTrigger.innerText = "❌ Gabim Word";
+            }
         };
         reader.readAsArrayBuffer(file);
     } else if (file.type.startsWith("image/")) {

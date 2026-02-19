@@ -87,10 +87,9 @@ header {
 .main-container {
     flex: 1;
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    /* Larger sidebar for bigger camera */
-    gap: 2rem;
-    padding: 2rem;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
     overflow: hidden;
 }
 
@@ -209,8 +208,10 @@ header {
 .controls-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
     height: 100%;
+    overflow-y: auto;
+    padding-right: 0.5rem;
 }
 
 .video-preview {
@@ -242,10 +243,10 @@ header {
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 24px;
-    padding: 2rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -292,12 +293,12 @@ textarea {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--glass-border);
     color: white;
-    border-radius: 16px;
-    padding: 1.25rem;
-    font-size: 0.95rem;
-    line-height: 1.5;
+    border-radius: 12px;
+    padding: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
     resize: none;
-    height: 140px;
+    height: 100px;
     transition: all 0.3s;
     outline: none;
 }
@@ -327,6 +328,16 @@ button {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+}
+
+#start-btn {
+    background: linear-gradient(135deg, var(--accent-color), #00c6ff);
+    box-shadow: 0 0 20px var(--accent-glow);
+    font-size: 1.1rem;
+    padding: 1.25rem;
+    border-radius: 16px;
+    grid-column: span 2;
+    /* Make it more prominent */
 }
 
 button:hover {
