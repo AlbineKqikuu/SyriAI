@@ -1,0 +1,16 @@
+{
+    "name": "SyriAI - AI Teleprompter",
+    "short_name": "SyriAI",
+    "description": "Professional AI Teleprompter for News Broadcasting",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#000814",
+    "theme_color": "#007aff",
+    "icons": [
+        {
+            "src": "favicon.ico",
+            "sizes": "64x64 32x32 24x24 16x16",
+            "type": "image/x-icon"
+        }
+    ]
+}

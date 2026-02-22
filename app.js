@@ -4,6 +4,17 @@ recognition.continuous = true;
 recognition.interimResults = true;
 recognition.lang = 'sq-AL';
 
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SyriAI SW Registered', reg);
+        }).catch(err => {
+            console.log('SyriAI SW Registration Failed', err);
+        });
+    });
+}
+
 const scriptDisplay = document.getElementById('script-display');
 const scrollContainer = document.getElementById('scroll-container');
 const fontSizeInput = document.getElementById('font-size');
