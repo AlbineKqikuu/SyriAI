@@ -70,7 +70,7 @@ startBtn.addEventListener('click', () => {
 
     // Ensure Client is in the right mode (if PDF is active, show it)
     if (currentPdf) {
-        renderMainPdf(currentSlideNum);
+        renderMainPdf();
         broadcastUpdate('view_mode', viewDocBtn.classList.contains('active') ? 'doc' : 'text');
     }
 });
