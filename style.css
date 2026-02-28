@@ -165,6 +165,20 @@ header {
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
+.reading-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    z-index: 100;
+    opacity: 0.6;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
 /* New Full-Size PDF Viewer Main */
 .pdf-viewer-main {
     position: absolute;
