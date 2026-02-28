@@ -254,7 +254,9 @@ const openClientBtn = document.getElementById('open-client-btn');
 
 async function renderMainPdf() {
     if (!currentPdf) return;
-    pdfViewMain.innerHTML = ''; // Clear previous
+    pdfViewMain.innerHTML = ''; // Clear admin
+    broadcastUpdate('pdf_clear', true); // Clear client
+
     for (let i = 1; i <= currentPdf.numPages; i++) {
         const page = await currentPdf.getPage(i);
         const viewport = page.getViewport({ scale: 2.0 });
@@ -267,10 +269,12 @@ async function renderMainPdf() {
         await page.render({ canvasContext: context, viewport: viewport }).promise;
         pdfViewMain.appendChild(canvas);
 
-        // Broadcast the first few pages or send update that pages are loaded
+        // Broadcast page to client
+        const pageData = canvas.toDataURL('image/webp', 0.6);
+        broadcastUpdate('pdf_page_chunk', pageData);
+
         if (i === 1) {
             broadcastUpdate('view_mode', 'doc');
-            broadcastUpdate('pdf_pages_ready', currentPdf.numPages);
         }
     }
 }

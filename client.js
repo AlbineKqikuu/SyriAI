@@ -66,9 +66,24 @@ syncChannel.onmessage = (event) => {
                 slideArea.classList.remove('full-view');
             }
             break;
+        case 'pdf_page_chunk':
+            // Hide the single slide canvas when doing continuous render
+            slideCanvas.style.display = 'none';
+            const img = new Image();
+            img.src = data;
+            img.className = 'pdf-continuous-img';
+            img.style.width = '100%';
+            img.style.display = 'block';
+            img.style.marginBottom = '20px';
+            img.style.boxShadow = '0 0 30px rgba(0,0,0,0.8)';
+            slideArea.appendChild(img);
+            break;
+        case 'pdf_clear':
+            slideArea.querySelectorAll('.pdf-continuous-img').forEach(el => el.remove());
+            slideCanvas.style.display = 'block'; // Restore canvas visibility
+            break;
         case 'pdf_pages_ready':
-            // The admin has finished loading all pages. Client doesn't need to do anything 
-            // since admin sends the scroll position and state.
+            // Deprecated
             break;
         case 'view_mode':
             const marker = document.getElementById('reading-marker');
