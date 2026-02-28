@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyriAI Client - Studio View</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            background: #000;
+        }
+
+        .client-split-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .camera-half {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 2px solid var(--glass-border);
+        }
+
+        #client-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .text-half {
+            flex: 1;
+            background: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .client-scroll-container {
+            flex: 1;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Initial center alignment */
+            padding: 0 2rem;
+            position: relative;
+        }
+
+        #client-script-display {
+            font-size: 3.5rem;
+            line-height: 1.4;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: pre-wrap;
+            text-align: center;
+        }
+
+        .client-header {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            right: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .client-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .client-clock {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+        }
+
+        /* Marker for the reading line */
+        .reading-marker {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-glow);
+            z-index: 5;
+            opacity: 0.3;
+            pointer-events: none;
+            transform: translateY(-50%);
+        }
+
+        /* Override style.css word highlights for client view */
+        .word-span {
+            display: inline-block;
+            transition: all 0.3s ease;
+            margin: 0 0.2em;
+        }
+
+        .highlight {
+            color: #fff !important;
+            background: var(--accent-color) !important;
+            box-shadow: 0 0 30px var(--accent-glow) !important;
+            transform: scale(1.1) !important;
+        }
+
+        .read {
+            opacity: 0.3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="client-split-container">
+        <div class="camera-half">
+            <video id="client-video" autoplay playsinline></video>
+            <div class="client-clock" id="client-time"
+                style="position: absolute; bottom: 1rem; left: 1rem; background: rgba(0,0,0,0.5); padding: 0.5rem; border-radius: 8px;">
+                00:00:00</div>
+        </div>
+        <div class="text-half">
+            <div class="client-header">
+                <div class="client-logo">SyriAI LIVE</div>
+                <div id="connection-indicator"
+                    style="width: 12px; height: 12px; border-radius: 50%; background: #34c759; box-shadow: 0 0 10px #34c759;">
+                </div>
+            </div>
+            <div id="reading-marker" class="reading-marker"></div>
+            <div class="client-scroll-container" id="client-scroll-box">
+                <div id="client-script-display">Pret skriptin nga Admin...</div>
+            </div>
+            <!-- Client Visual Slide Panel -->
+            <div id="client-slide-area" class="client-slide-area" style="display: none;">
+                <canvas id="client-slide-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+
+</html>

@@ -1,6 +1,6 @@
 {
     "hosting": {
-        "site": "syriai-4752b",
+        "site": "syriai-albine",
         "public": "dist",
         "ignore": [
             "firebase.json",

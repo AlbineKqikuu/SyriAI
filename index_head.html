@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="sq">
 
 <head>
@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyriAI - AI Teleprompter</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007aff">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,7 +30,7 @@
             <div id="live-clock" class="digital-clock">00:00:00</div>
         </div>
         <div class="header-right">
-            <button id="mirror-btn" class="icon-btn" title="Mirror Mode">🪞</button>
+            <button id="mirror-btn" class="icon-btn" title="Mirror Mode">≡ƒ¬₧</button>
             <div id="connection-status" class="status-badge">Standby</div>
         </div>
     </header>
@@ -41,27 +43,11 @@
                 <div class="stat"><span class="label">ACCURACY</span><span id="stat-acc">0%</span></div>
             </div>
             <div class="scroll-container" id="scroll-container">
-                <div id="script-display">Shkruaj Tekstin.</div>
-            </div>
-            <!-- Full Document View Mode -->
-            <div id="pdf-view-main" class="pdf-viewer-main" style="display: none;">
-                <canvas id="pdf-main-canvas"></canvas>
-                <div class="pdf-nav-overlay">
-                    <button id="main-prev-pdf" class="nav-btn">←</button>
-                    <span id="main-pdf-num">Faqja 1 / 1</span>
-                    <button id="main-next-pdf" class="nav-btn">→</button>
-                </div>
-            </div>
-            <!-- Visual Slide Overlay -->
-            <div id="slide-overlay" class="slide-overlay" style="display: none;">
-                <canvas id="slide-canvas"></canvas>
-                <div class="slide-controls">
-                    <button id="prev-slide" class="slide-mini-btn">←</button>
-                    <span id="slide-num" class="slide-num">Sllajdi 1 / 1</span>
-                    <button id="next-slide" class="slide-mini-btn">→</button>
-                    <button id="max-slide" class="slide-mini-btn" title="Zmadho">⛶</button>
-                    <button id="close-slide" class="slide-mini-btn">×</button>
-                </div>
+                <div id="script-display">Mirm├½br├½ma dhe mir├½sevini n├½ edicionin qendror t├½ lajmeve n├½ SyriAI. Sot do t├½
+                    ndiqni: Zhvillimet e fundit n├½ fush├½n e teknologjis├½ dhe inteligjenc├½s artificiale n├½ vendin ton├½.
+                    Ekspert├½t parashikojn├½ nj├½ rritje t├½ madhe t├½ investimeve n├½ inovacion gjat├½ k├½tij viti. Nd├½rkoh├½,
+                    moti parashikohet t├½ jet├½ i q├½ndruesh├½m n├½ pjes├½n m├½ t├½ madhe t├½ territorit, me rritje t├½ leht├½ t├½
+                    temperaturave n├½ fundjav├½. Q├½ndroni me ne p├½r detaje t├½ tjera rreth k├½tij edicioni.</div>
             </div>
         </section>
 
@@ -78,13 +64,12 @@
             <div class="studio-controls">
                 <button id="blur-btn" class="studio-btn">Blur Sfondin</button>
                 <button id="studio-bg-btn" class="studio-btn">Studio Virtuale</button>
-                <button id="record-btn" class="record-btn">🔴 RECORD</button>
+                <button id="record-btn" class="record-btn">≡ƒö┤ RECORD</button>
             </div>
 
             <div class="control-panel">
                 <div class="button-grid">
                     <button id="start-btn">Fillo LIVE</button>
-                    <button id="open-client-btn" class="secondary">📺 Klienti LIVE</button>
                     <button id="stop-btn" class="secondary">Ndalo</button>
                 </div>
 
@@ -92,25 +77,17 @@
                     <label>Ngarkoni Skriptin (PDF, Word)</label>
                     <div class="upload-wrapper">
                         <input type="file" id="file-upload" accept=".pdf,.docx" style="display:none;">
-                        <button id="upload-trigger" class="secondary">📤 Ngarko File</button>
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <label>Pamja e Ekranit</label>
-                    <div class="view-mode-flex">
-                        <button id="view-text-btn" class="view-mode-btn active">TEKST</button>
-                        <button id="view-doc-btn" class="view-mode-btn">DOKUMENT</button>
+                        <button id="upload-trigger" class="secondary">≡ƒôñ Ngarko File</button>
                     </div>
                 </div>
 
                 <div class="control-group">
                     <label>Skripti i Lajmeve</label>
-                    <textarea id="script-input" placeholder="Ngjisni tekstin tuaj këtu..."></textarea>
+                    <textarea id="script-input" placeholder="Ngjisni tekstin tuaj k├½tu..."></textarea>
                 </div>
 
                 <div class="control-group">
-                    <label>Madhësia e Shkrimit</label>
+                    <label>Madh├½sia e Shkrimit</label>
                     <input type="range" id="font-size" min="2" max="6" step="0.5" value="3.5">
                 </div>
             </div>
@@ -123,13 +100,13 @@
             <div class="ticker-track">
                 <span>++ SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI ++</span>
                 <span>++ TEKNOLOGJIA AI PO NDRYSHON BROADCASTING ++</span>
-                <span>++ MËSO SHUMË PËR MASTERIN TËND KËTU ++</span>
+                <span>++ M├ïSO SHUM├ï P├ïR MASTERIN T├ïND K├ïTU ++</span>
                 <span>++ NDRYSHIMET KLIMATIKE: PARASHIKIMI I MOTIT ++</span>
             </div>
         </div>
     </footer>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 
 </html>

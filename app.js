@@ -1,19 +1,14 @@
 // Web Speech API Setup
+const syncChannel = new BroadcastChannel('syriai_sync');
+
+function broadcastUpdate(type, data) {
+    syncChannel.postMessage({ type, data });
+}
+
 const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 recognition.continuous = true;
 recognition.interimResults = true;
 recognition.lang = 'sq-AL';
-
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-            console.log('SyriAI SW Registered', reg);
-        }).catch(err => {
-            console.log('SyriAI SW Registration Failed', err);
-        });
-    });
-}
 
 const scriptDisplay = document.getElementById('script-display');
 const scrollContainer = document.getElementById('scroll-container');
@@ -72,6 +67,12 @@ startBtn.addEventListener('click', () => {
             console.error("Webcam error:", err);
             statusBadge.innerText = "Error: Webcam/Mic Blocked";
         });
+
+    // Ensure Client is in the right mode (if PDF is active, show it)
+    if (currentPdf) {
+        renderMainPdf(currentSlideNum);
+        broadcastUpdate('view_mode', viewDocBtn.classList.contains('active') ? 'doc' : 'text');
+    }
 });
 
 recognition.onstart = () => {
@@ -102,10 +103,18 @@ stopBtn.addEventListener('click', () => {
 
 fontSizeInput.addEventListener('input', (e) => {
     scriptDisplay.style.fontSize = `${e.target.value}rem`;
+    broadcastUpdate('font_size', e.target.value);
+});
+
+scriptInput.addEventListener('input', () => {
+    const text = scriptInput.value;
+    words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    renderScript(words);
+    currentWordIndex = 0;
 });
 
 function renderScript(wordList) {
-    scriptDisplay.innerHTML = wordList.map((word, i) => {
+    const html = wordList.map((word, i) => {
         let className = "word-span";
         // Smart Highlighting Logic
         if (/\d{1,2}[\/\.-]\d{1,2}/.test(word)) className += " hl-date"; // Dates
@@ -114,6 +123,8 @@ function renderScript(wordList) {
 
         return `<span id="word-${i}" class="${className}">${word} </span>`;
     }).join('');
+    scriptDisplay.innerHTML = html;
+    broadcastUpdate('script_update', { words: wordList, html: html });
 }
 
 recognition.onresult = (event) => {
@@ -202,6 +213,7 @@ function highlightWord(index) {
     const wordEl = document.getElementById(`word-${index}`);
     if (wordEl) {
         wordEl.classList.add('highlight');
+        broadcastUpdate('highlight_update', index);
     }
 }
 
@@ -228,6 +240,131 @@ const recordBtn = document.getElementById('record-btn');
 const fileUpload = document.getElementById('file-upload');
 const uploadTrigger = document.getElementById('upload-trigger');
 const connectionStatus = document.getElementById('connection-status');
+
+// New UI Elements for Main PDF View
+const pdfViewMain = document.getElementById('pdf-view-main');
+const pdfMainCanvas = document.getElementById('pdf-main-canvas');
+const pdfMainCtx = pdfMainCanvas.getContext('2d');
+const mainPdfNum = document.getElementById('main-pdf-num');
+const mainPrevBtn = document.getElementById('main-prev-pdf');
+const mainNextBtn = document.getElementById('main-next-pdf');
+const viewTextBtn = document.getElementById('view-text-btn');
+const viewDocBtn = document.getElementById('view-doc-btn');
+const openClientBtn = document.getElementById('open-client-btn');
+
+async function renderMainPdf() {
+    if (!currentPdf) return;
+    pdfViewMain.innerHTML = ''; // Clear previous
+    for (let i = 1; i <= currentPdf.numPages; i++) {
+        const page = await currentPdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page-canvas';
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        pdfViewMain.appendChild(canvas);
+
+        // Broadcast the first few pages or send update that pages are loaded
+        if (i === 1) {
+            broadcastUpdate('view_mode', 'doc');
+            broadcastUpdate('pdf_pages_ready', currentPdf.numPages);
+        }
+    }
+}
+
+// View Mode Switching
+viewTextBtn.addEventListener('click', () => {
+    viewTextBtn.classList.add('active');
+    viewDocBtn.classList.remove('active');
+    scrollContainer.style.display = 'block';
+    pdfViewMain.style.display = 'none';
+    broadcastUpdate('view_mode', 'text');
+});
+
+viewDocBtn.addEventListener('click', () => {
+    if (!currentPdf) {
+        alert("Ju lutem ngarkoni një PDF fillimisht.");
+        return;
+    }
+    viewDocBtn.classList.add('active');
+    viewTextBtn.classList.remove('active');
+    scrollContainer.style.display = 'none';
+    pdfViewMain.style.display = 'block';
+    renderMainPdf(); // Initial continuous render
+    broadcastUpdate('view_mode', 'doc');
+});
+
+// Removed side-to-side PDF buttons logic as we now use vertical scroll
+
+
+// Slide Visual Logic
+const slideOverlay = document.getElementById('slide-overlay');
+const slideCanvas = document.getElementById('slide-canvas');
+const slideCtx = slideCanvas.getContext('2d');
+const slideNumDisplay = document.getElementById('slide-num');
+const prevSlideBtn = document.getElementById('prev-slide');
+const nextSlideBtn = document.getElementById('next-slide');
+const closeSlideBtn = document.getElementById('close-slide');
+
+let currentPdf = null;
+let currentSlideNum = 1;
+
+async function renderSlide(num) {
+    if (!currentPdf) return;
+    const page = await currentPdf.getPage(num);
+    // Increase scale for high-definition rendering (Retina-ready)
+    const viewport = page.getViewport({ scale: 2.5 });
+    slideCanvas.height = viewport.height;
+    slideCanvas.width = viewport.width;
+
+    const renderCtx = {
+        canvasContext: slideCtx,
+        viewport: viewport,
+        enableWebGL: true
+    };
+    await page.render(renderCtx).promise;
+    slideNumDisplay.innerText = `Sllajdi ${num} / ${currentPdf.numPages}`;
+
+    // Broadcast the slide image to client with higher quality
+    const slideData = slideCanvas.toDataURL('image/webp', 0.85);
+    broadcastUpdate('slide_update', {
+        image: slideData,
+        show: true,
+        fullView: slideOverlay.classList.contains('maximized')
+    });
+}
+
+prevSlideBtn.addEventListener('click', () => {
+    if (currentSlideNum <= 1) return;
+    currentSlideNum--;
+    renderSlide(currentSlideNum);
+});
+
+nextSlideBtn.addEventListener('click', () => {
+    if (currentPdf && currentSlideNum >= currentPdf.numPages) return;
+    currentSlideNum++;
+    renderSlide(currentSlideNum);
+});
+
+const maxSlideBtn = document.getElementById('max-slide');
+maxSlideBtn.addEventListener('click', () => {
+    slideOverlay.classList.toggle('maximized');
+    // Re-render to adapt to new size if needed, though canvas scales via CSS mostly
+    // We send a broadcast update to sync the "Full View" state on client
+    broadcastUpdate('slide_update', {
+        show: true,
+        fullView: slideOverlay.classList.contains('maximized')
+    });
+});
+
+closeSlideBtn.addEventListener('click', () => {
+    slideOverlay.style.display = 'none';
+    slideOverlay.classList.remove('maximized');
+    broadcastUpdate('slide_update', { show: false });
+});
 
 // 1. INITIALIZE STUDIO BACKGROUND IMAGE
 const studioBgImg = new Image();
@@ -419,11 +556,15 @@ fileUpload.addEventListener('change', async (e) => {
                 scriptInput.value = fullText.trim();
                 uploadTrigger.innerText = "✅ U ngarkua!";
 
-                // CRITICAL: Force update of teleprompter data
-                const newWords = scriptInput.value.trim().split(/\s+/).filter(w => w.length > 0);
-                renderScript(newWords);
-                words = newWords; // Update global words array
-                currentWordIndex = 0; // Reset index
+                // Visual Slide Setup
+                currentPdf = pdf;
+                currentSlideNum = 1;
+
+                // Automatically switch to DOCUMENT View
+                viewDocBtn.click();
+
+                // Hide the small overlay as we are now in Main View
+                slideOverlay.style.display = 'none';
 
                 scriptInput.dispatchEvent(new Event('input'));
             } catch (err) {
@@ -493,6 +634,11 @@ function saveRecording() {
     a.click();
 }
 
+// Open Client View in a new tab
+openClientBtn.addEventListener('click', () => {
+    window.open('client.html', '_blank');
+});
+
 // Button Listeners
 blurBtn.addEventListener('click', () => {
     isBlurActive = !isBlurActive;
@@ -508,10 +654,88 @@ studioBgBtn.addEventListener('click', () => {
     blurBtn.classList.remove('active');
 });
 
+// Keyboard & Remote Navigation
+window.addEventListener('keydown', (e) => {
+    // Avoid navigation when typing
+    if (['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+
+    const isDocMode = viewDocBtn.classList.contains('active');
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        if (isDocMode) {
+            // Smooth vertical scroll like a PDF app
+            pdfViewMain.scrollTop += 150;
+            broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+        } else {
+            // Navigate by word in text mode
+            currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+            highlightWord(currentWordIndex);
+            scrollToWord(currentWordIndex);
+            updateAnalytics();
+        }
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        if (isDocMode) {
+            pdfViewMain.scrollTop -= 150;
+            broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+        } else {
+            // Navigate by word in text mode
+            currentWordIndex = Math.max(0, currentWordIndex - 1);
+            highlightWord(currentWordIndex);
+            scrollToWord(currentWordIndex);
+            updateAnalytics();
+        }
+    }
+});
+
+syncChannel.onmessage = (event) => {
+    const { type, data } = event.data;
+    const isDocMode = viewDocBtn.classList.contains('active');
+
+    if (type === 'nav_next') {
+        if (isDocMode) {
+            pdfViewMain.scrollTop += 150;
+            broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+        } else {
+            currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+            highlightWord(currentWordIndex);
+            scrollToWord(currentWordIndex);
+            updateAnalytics();
+        }
+    }
+    else if (type === 'nav_prev') {
+        if (isDocMode) {
+            pdfViewMain.scrollTop -= 150;
+            broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+        } else {
+            currentWordIndex = Math.max(0, currentWordIndex - 1);
+            highlightWord(currentWordIndex);
+            scrollToWord(currentWordIndex);
+            updateAnalytics();
+        }
+    }
+    else if (type === 'pdf_scroll') {
+        pdfViewMain.scrollTop = data;
+    }
+    else if (type === 'client_ready') {
+        // When client connects, wait a tiny bit then send state
+        setTimeout(() => {
+            const isDoc = viewDocBtn.classList.contains('active');
+            if (currentPdf && isDoc) renderMainPdf();
+            broadcastUpdate('view_mode', isDoc ? 'doc' : 'text');
+            broadcastUpdate('font_size', fontSizeInput.value);
+            // Repost script content just in case
+            const text = scriptInput.value;
+            const wordsList = text.trim().split(/\s+/).filter(w => w.length > 0);
+            renderScript(wordsList);
+        }, 300);
+    }
+};
+
 // Start MediaPipe
 startBtn.addEventListener('click', () => {
     // ... (Previous logic remains)
-
     outputCanvas.width = 640;
     outputCanvas.height = 480;
     gazeCanvas.width = 640;
