@@ -112,15 +112,18 @@ slideArea.addEventListener('scroll', () => {
     }
 });
 
-// Client Keyboard Control (Arrows)
+// Client Keyboard Control (Arrows & Scrolling)
 window.addEventListener('keydown', (e) => {
     // Avoid navigation when typing
     if (['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
 
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+    const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' '];
+    const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp'];
+
+    if (nextKeys.includes(e.key)) {
         e.preventDefault();
         syncChannel.postMessage({ type: 'nav_next' });
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+    } else if (prevKeys.includes(e.key)) {
         e.preventDefault();
         syncChannel.postMessage({ type: 'nav_prev' });
     }
