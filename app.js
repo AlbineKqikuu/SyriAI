@@ -59,13 +59,13 @@ startBtn.addEventListener('click', () => {
         console.error("Recognition already started or error:", e);
     }
 
-    // Start Webcam
-    navigator.mediaDevices.getUserMedia({ video: true })
+    // Start Webcam & Mic
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
             video.srcObject = stream;
         }).catch(err => {
-            console.error("Webcam error:", err);
-            statusBadge.innerText = "Error: Webcam/Mic Blocked";
+            console.error("Webcam/Mic error:", err);
+            statusBadge.innerText = "Error: Pajisjet nuk u gjetën";
         });
 
     // Ensure Client is in the right mode (if PDF is active, show it)
@@ -219,6 +219,19 @@ function highlightWord(index) {
 
 function scrollToWord(index) {
     const wordEl = document.getElementById(`word-${index}`);
+    const isDocMode = viewDocBtn.classList.contains('active');
+
+    // If in PDF mode, scroll the document proportionately
+    if (isDocMode && words.length > 0) {
+        const scrollPercent = index / words.length;
+        const targetScroll = Math.max(0, (scrollPercent * pdfViewMain.scrollHeight) - (pdfViewMain.clientHeight / 2));
+        pdfViewMain.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+        });
+        broadcastUpdate('pdf_scroll', targetScroll);
+    }
+
     if (wordEl) {
         wordEl.scrollIntoView({
             behavior: 'smooth',
