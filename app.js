@@ -37,11 +37,14 @@ mirrorBtn.addEventListener('click', () => {
 });
 
 let words = [];
+let pageWordBoundaries = [];
+let allWordPositions = []; // Detailed PDF word coordinates
 let currentWordIndex = 0;
 let startTime = null;
 let totalMatches = 0;
 let totalAttempts = 0;
 let isSyncingScroll = false;
+let localStream = null;
 
 // Update UI on start
 startBtn.addEventListener('click', () => {
@@ -112,7 +115,7 @@ function renderScript(wordList) {
         // Smart Highlighting Logic
         if (/\d{1,2}[\/\.-]\d{1,2}/.test(word)) className += " hl-date"; // Dates
         else if (/\d+/.test(word)) className += " hl-number"; // Numbers
-        else if (/^[A-ZÇË][a-zçë]+/.test(word) && i > 0) className += " hl-name"; // Probable Names (Capitals not at start)
+        else if (/^[A-ZÇË][a-zçë]+/.test(word) && i > 0) className += " hl-name"; // Probable Names
 
         return `<span id="word-${i}" class="${className}">${word} </span>`;
     }).join('');
@@ -133,42 +136,66 @@ recognition.onresult = (event) => {
 };
 
 function matchAndScroll(spokenText) {
-    // Increased range to 6 words to allow skipping over mispronounced or missed words.
-    const searchRange = 6;
+    // Range to search ahead in the script
+    const searchRange = 25;
     const lookAhead = words.slice(currentWordIndex, currentWordIndex + searchRange);
 
-    const spokenWords = spokenText.split(/\s+/).map(w => w.replace(/[.,!?;]/g, "").toLowerCase());
+    // Clean spoken words
+    const spokenWords = spokenText.split(/\s+/)
+        .map(w => w.replace(/[.,!?;]/g, "").toLowerCase())
+        .filter(w => w.length > 0);
 
-    // We check the last 2 spoken words to find a match in the upcoming script
-    const recentSpoken = spokenWords.slice(-2);
+    if (spokenWords.length === 0) return;
 
-    if (recentSpoken.length === 0) return;
+    // Use the last 3 spoken words to find context (trigram or bigram)
+    const recentSpoken = spokenWords.slice(-3);
+    const lastSpoken = recentSpoken[recentSpoken.length - 1];
+    const prevSpoken = recentSpoken.length > 1 ? recentSpoken[recentSpoken.length - 2] : null;
 
-    let matchFoundIndex = -1;
+    let bestMatchIndex = -1;
+    let matchStrength = 0; // 0: None, 1: Single Word, 2: Bigram/Context
 
     for (let i = 0; i < lookAhead.length; i++) {
         const scriptWord = lookAhead[i].toLowerCase().replace(/[.,!?;]/g, "");
         if (scriptWord.length < 2) continue;
 
-        // Check if any of our recent spoken words match this script word
-        const isMatch = recentSpoken.some(sw =>
-            sw === scriptWord ||
-            (scriptWord.length > 5 && sw.startsWith(scriptWord.substring(0, 4))) ||
-            (sw.length > 5 && scriptWord.startsWith(sw.substring(0, 4)))
-        );
+        // Perfect Match Step 1: Bigram Match (Strength 2)
+        // If this word and the previous one match our spoken sequence
+        if (i > 0 && prevSpoken) {
+            const prevScriptWord = lookAhead[i - 1].toLowerCase().replace(/[.,!?;]/g, "");
+            if (scriptWord === lastSpoken && prevScriptWord === prevSpoken) {
+                bestMatchIndex = i;
+                matchStrength = 2;
+                break; // Found the best possible match
+            }
+        }
 
-        if (isMatch) {
-            matchFoundIndex = i;
-            break;
+        // Good Match Step 2: Single Word Match (Strength 1)
+        // Only if we haven't found a bigram yet, and it's not a tiny common word
+        if (matchStrength < 2 && scriptWord === lastSpoken && scriptWord.length > 2) {
+            // Prefer the earliest match in the look-ahead
+            if (bestMatchIndex === -1) {
+                bestMatchIndex = i;
+                matchStrength = 1;
+            }
+        }
+
+        // Fuzzy Match Step 3: Prefix for long words
+        if (matchStrength < 1 && scriptWord.length > 6 && lastSpoken.length > 4) {
+            if (scriptWord.startsWith(lastSpoken.substring(0, 4)) || lastSpoken.startsWith(scriptWord.substring(0, 4))) {
+                bestMatchIndex = i;
+                matchStrength = 0.5;
+            }
         }
     }
 
-    if (matchFoundIndex !== -1) {
-        const actualIndex = currentWordIndex + matchFoundIndex;
+    if (bestMatchIndex !== -1) {
+        const actualIndex = currentWordIndex + bestMatchIndex;
         highlightWord(actualIndex);
 
         // Update tracking state
         totalMatches++;
+        // Use a small look-back to prevent skipping if we matched slightly ahead
         currentWordIndex = actualIndex + 1;
         scrollToWord(actualIndex);
         updateAnalytics();
@@ -197,6 +224,7 @@ function updateAnalytics() {
 }
 
 function highlightWord(index) {
+    // 1. Teleprompter Text Highlight (Overlay or Normal)
     for (let i = 0; i <= index; i++) {
         const el = document.getElementById(`word-${i}`);
         if (el) el.classList.add('read');
@@ -208,21 +236,66 @@ function highlightWord(index) {
         wordEl.classList.add('highlight');
         broadcastUpdate('highlight_update', index);
     }
+
+    // 2. High-Precision PDF Word Highlight
+    if (viewDocBtn.classList.contains('active') && allWordPositions.length > 0) {
+        const pdfWord = allWordPositions[index];
+        if (pdfWord) {
+            // Hide all potential PDF highlights first
+            document.querySelectorAll('.pdf-highlight').forEach(el => el.style.display = 'none');
+
+            const hl = document.getElementById(`pdf-hl-${pdfWord.page}`);
+            if (hl) {
+                hl.style.display = 'block';
+                hl.style.left = (pdfWord.nx * 100) + '%';
+                hl.style.top = (pdfWord.ny * 100) + '%';
+                hl.style.width = (pdfWord.nw * 100) + '%';
+                hl.style.height = (pdfWord.nh * 100) + '%';
+            }
+            broadcastUpdate('pdf_word_highlight', pdfWord);
+        }
+    }
 }
 
 function scrollToWord(index) {
     const wordEl = document.getElementById(`word-${index}`);
     const isDocMode = viewDocBtn.classList.contains('active');
 
-    // If in PDF mode, scroll the document proportionately
-    if (isDocMode && words.length > 0) {
-        const scrollPercent = index / words.length;
-        const targetScroll = Math.max(0, (scrollPercent * pdfViewMain.scrollHeight) - (pdfViewMain.clientHeight / 2));
-        pdfViewMain.scrollTo({
-            top: targetScroll,
-            behavior: 'smooth'
-        });
-        broadcastUpdate('pdf_scroll', targetScroll);
+    // If in PDF mode, scroll the document proportionately using page boundaries
+    if (isDocMode && words.length > 0 && pageWordBoundaries.length > 0) {
+        // Find which page this word is on
+        let pageIndex = 0;
+        for (let i = 0; i < pageWordBoundaries.length; i++) {
+            if (index >= pageWordBoundaries[i]) {
+                pageIndex = i;
+            } else {
+                break;
+            }
+        }
+
+        // Calculate progress within that specific page
+        const startOfPage = pageWordBoundaries[pageIndex];
+        const nextStartOfPage = pageWordBoundaries[pageIndex + 1] || words.length;
+        const wordsInPage = nextStartOfPage - startOfPage;
+        const progressInPage = (index - startOfPage) / Math.max(1, wordsInPage);
+
+        // Get the actual page height in the container
+        const pages = pdfViewMain.querySelectorAll('.pdf-page-canvas');
+        if (pages[pageIndex]) {
+            const pageEl = pages[pageIndex];
+            const pageTop = pageEl.offsetTop;
+            const pageHeight = pageEl.clientHeight;
+
+            // Target is the top of the page plus the progress within the page, 
+            // centered in the viewer
+            const targetScroll = pageTop + (progressInPage * pageHeight) - (pdfViewMain.clientHeight / 2);
+
+            pdfViewMain.scrollTo({
+                top: Math.max(0, targetScroll),
+                behavior: 'smooth'
+            });
+            broadcastUpdate('pdf_scroll', Math.max(0, targetScroll));
+        }
     }
 
     if (wordEl) {
@@ -274,18 +347,32 @@ async function renderMainPdf() {
     for (let i = 1; i <= currentPdf.numPages; i++) {
         const page = await currentPdf.getPage(i);
         const viewport = page.getViewport({ scale: 2.0 });
+
+        // Create container for page and highlight layer
+        const container = document.createElement('div');
+        container.className = 'pdf-page-container';
+        container.id = `pdf-page-${i}`;
+
         const canvas = document.createElement('canvas');
         canvas.className = 'pdf-page-canvas';
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
+        // Create the highlight overlay
+        const highlight = document.createElement('div');
+        highlight.className = 'pdf-highlight';
+        highlight.id = `pdf-hl-${i}`;
+
+        container.appendChild(canvas);
+        container.appendChild(highlight);
+        pdfViewMain.appendChild(container);
+
         await page.render({ canvasContext: context, viewport: viewport }).promise;
-        pdfViewMain.appendChild(canvas);
 
         // Broadcast page to client
         const pageData = canvas.toDataURL('image/webp', 0.6);
-        broadcastUpdate('pdf_page_chunk', pageData);
+        broadcastUpdate('pdf_page_chunk', { image: pageData, page: i });
 
         if (i === 1) {
             broadcastUpdate('view_mode', 'doc');
@@ -297,6 +384,7 @@ async function renderMainPdf() {
 viewTextBtn.addEventListener('click', () => {
     viewTextBtn.classList.add('active');
     viewDocBtn.classList.remove('active');
+    scrollContainer.classList.remove('overlay-mode');
     scrollContainer.style.display = 'block';
     pdfViewMain.style.display = 'none';
     broadcastUpdate('view_mode', 'text');
@@ -309,9 +397,10 @@ viewDocBtn.addEventListener('click', () => {
     }
     viewDocBtn.classList.add('active');
     viewTextBtn.classList.remove('active');
+    // Hide the teleprompter text completely, only show PDF
     scrollContainer.style.display = 'none';
     pdfViewMain.style.display = 'block';
-    renderMainPdf(); // Initial continuous render
+    renderMainPdf();
     broadcastUpdate('view_mode', 'doc');
 });
 
@@ -731,11 +820,58 @@ fileUpload.addEventListener('change', async (e) => {
                 });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
+                // Reset PDF word positions
+                allWordPositions = [];
+                pageWordBoundaries = [0];
+
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 });
                     const textContent = await page.getTextContent();
+
+                    // High-precision word extraction
+                    textContent.items.forEach(item => {
+                        const str = item.str;
+                        const trimmedStr = str.trim();
+                        if (!trimmedStr) return;
+
+                        const wordsInItem = trimmedStr.split(/\s+/).filter(w => w.length > 0);
+                        const transform = item.transform;
+                        // Coordinates: vx/vy are the baseline position
+                        const [vx, vy] = viewport.convertToViewportPoint(transform[4], transform[5]);
+
+                        let currentSearchPos = 0;
+                        wordsInItem.forEach(w => {
+                            const wordIdx = str.indexOf(w, currentSearchPos);
+                            if (wordIdx === -1) return;
+
+                            // Calculate relative position of word within the string
+                            const offsetPercent = wordIdx / str.length;
+                            const widthPercent = w.length / str.length;
+
+                            const itemWidth = item.width * 2.0;
+                            const itemHeight = item.height * 2.0;
+
+                            const wordX = vx + (offsetPercent * itemWidth);
+                            const wordW = widthPercent * itemWidth;
+
+                            allWordPositions.push({
+                                text: w,
+                                page: i,
+                                nx: (wordX - 2) / viewport.width, // Slight left offset for padding
+                                ny: (vy - (itemHeight * 1.15)) / viewport.height, // Better vertical centering
+                                nw: (wordW + 4) / viewport.width, // Extra width for glow padding
+                                nh: (itemHeight * 1.3) / viewport.height // Taller box to cover ascenders/descenders
+                            });
+                            currentSearchPos = wordIdx + w.length;
+                        });
+                    });
+
                     const pageText = textContent.items.map(item => item.str).join(" ");
                     fullText += pageText + "\n\n";
+
+                    const wordCount = pageText.trim().split(/\s+/).filter(w => w.length > 0).length;
+                    pageWordBoundaries.push(pageWordBoundaries[pageWordBoundaries.length - 1] + wordCount);
                 }
 
                 if (fullText.trim().length < 5) {
@@ -982,8 +1118,8 @@ function initCamera() {
     adminOutputCanvas.width = 1280;
     adminOutputCanvas.height = 720;
 
-    // Only request video unless user clicks start recording (to prevent mic blocking issues)
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    // Request video AND audio for full studio recording and better mic initialization
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
             localStream = stream; // Store globally
             video.srcObject = stream;
@@ -998,8 +1134,8 @@ function initCamera() {
             });
             camera.start();
         }).catch(err => {
-            console.error("Webcam error:", err);
-            if (connectionStatus) connectionStatus.innerText = "Error: Kamera nuk u gjet";
+            console.error("Webcam/Mic error:", err);
+            if (connectionStatus) connectionStatus.innerText = "Error: Kamera ose Mikrofoni nuk u gjet";
         });
 }
 

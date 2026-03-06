@@ -166,6 +166,28 @@ header {
     padding: 40vh 4rem;
     scroll-behavior: smooth;
     mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* PDF Overlay Mode - Teleprompter text floats over PDF */
+.overlay-mode {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1000 !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(2px) !important;
+    pointer-events: none !important;
+    padding-top: 45vh !important;
+    display: block !important;
+}
+
+.overlay-mode #script-display,
+.overlay-mode #client-script-display {
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.9), 0 2px 5px rgba(0, 0, 0, 1) !important;
+    color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .scroll-container::-webkit-scrollbar {
@@ -186,18 +208,9 @@ header {
     text-align: center;
 }
 
-.reading-line {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
-    box-shadow: 0 0 20px var(--accent-color);
-    z-index: 100;
-    opacity: 0.6;
-    pointer-events: none;
-    transform: translateY(-50%);
+.reading-line,
+.reading-marker {
+    display: none;
 }
 
 .pdf-viewer-main {
@@ -213,15 +226,33 @@ header {
     scroll-behavior: smooth;
 }
 
-.pdf-page-canvas {
+.pdf-page-container {
+    position: relative;
     width: 80%;
     max-width: 900px;
-    height: auto;
-    display: block;
     margin: 30px auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     border-radius: 8px;
     background: #fff;
+    overflow: hidden;
+}
+
+.pdf-page-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.pdf-highlight {
+    position: absolute;
+    background: rgba(0, 122, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 25px #007aff, 0 0 10px rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 100;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
 }
 
 .pdf-nav-overlay {
@@ -309,15 +340,16 @@ header {
 }
 
 .highlight {
-    color: #fff;
-    background: var(--accent-color);
-    box-shadow: 0 0 30px var(--accent-glow);
-    border-radius: 12px;
-    padding: 0 12px;
-    transform: scale(1.05);
-    z-index: 10;
+    color: #fff !important;
+    background: #007aff !important;
+    box-shadow: 0 0 40px rgba(0, 122, 255, 0.8), 0 0 10px #fff;
+    border-radius: 8px;
+    padding: 0 10px;
+    transform: scale(1.1);
+    z-index: 50;
     opacity: 1 !important;
     filter: blur(0px) !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 /* Smart Highlighting Styles */
@@ -791,4 +823,6 @@ button.secondary:hover {
     display: block;
 }
 
-"`n.icon-btn {`n    background: var(--glass-bg);`n    border: 1px solid var(--glass-border);`n    color: #fff;`n    width: 44px;`n    height: 44px;`n    border-radius: 12px;`n    display: flex;`n    align-items: center;`n    justify-content: center;`n    font-size: 1.2rem;`n    cursor: pointer;`n    transition: all 0.3s;`n}`n`n.icon-btn:hover {`n    background: rgba(255, 255, 255, 0.1);`n    transform: translateY(-2px);`n}`n`n.icon-btn.active {`n    background: var(--accent-color) !important;`n    border-color: var(--accent-color) !important;`n    box-shadow: 0 0 15px var(--accent-glow);`n}"
+.reading-marker {
+    display: none;
+}

@@ -226,33 +226,51 @@ syncChannel.onmessage = (event) => {
         case 'pdf_page_chunk':
             // Hide the single slide canvas when doing continuous render
             slideCanvas.style.display = 'none';
+
+            // Create container for page and highlight layer
+            const container = document.createElement('div');
+            container.className = 'pdf-page-container';
+            container.id = `pdf-page-${data.page}`;
+            container.style.width = '85%';
+            container.style.margin = '20px auto';
+
             const img = new Image();
-            img.src = data;
-            img.className = 'pdf-continuous-img';
+            img.src = data.image;
+            img.className = 'pdf-page-canvas';
             img.style.display = 'block';
-            img.style.margin = '20px auto';
-            img.style.boxShadow = '0 0 30px rgba(0,0,0,0.8)';
-            img.style.width = '85%';
-            slideArea.appendChild(img);
+            img.style.width = '100%';
+
+            const highlight = document.createElement('div');
+            highlight.className = 'pdf-highlight';
+            highlight.id = `pdf-hl-${data.page}`;
+
+            container.appendChild(img);
+            container.appendChild(highlight);
+            slideArea.appendChild(container);
+            break;
+
+        case 'pdf_word_highlight':
+            // High-precision scrolling on client for PDF
+            const pageEl = document.getElementById(`pdf-page-${data.page}`);
+            if (pageEl) {
+                const targetScroll = pageEl.offsetTop + (data.ny * pageEl.clientHeight) - (slideArea.clientHeight / 2);
+                slideArea.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+            }
             break;
         case 'pdf_clear':
-            slideArea.querySelectorAll('.pdf-continuous-img').forEach(el => el.remove());
+            slideArea.querySelectorAll('.pdf-page-container').forEach(el => el.remove());
             slideCanvas.style.display = 'block'; // Restore canvas visibility
             break;
         case 'pdf_pages_ready':
             // Deprecated
             break;
         case 'view_mode':
-            const marker = document.getElementById('reading-marker');
             if (data === 'doc') {
-                scriptDisplay.style.display = 'none';
-                if (marker) marker.style.display = 'none';
-                slideArea.classList.add('full-view');
+                scrollBox.style.display = 'none';
                 slideArea.style.display = 'block';
+                slideArea.classList.add('full-view');
             } else {
-                scriptDisplay.style.display = 'block';
-                if (marker) marker.style.display = 'block';
-                slideArea.classList.remove('full-view');
+                scrollBox.style.display = 'block';
                 slideArea.style.display = 'none';
             }
             break;
@@ -314,21 +332,17 @@ window.addEventListener('keydown', (e) => {
 });
 
 function highlightWord(index) {
-    // Clear previous highlights
-    document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
-
-    // Add new highlight
     const wordEl = document.getElementById(`word-${index}`);
     if (wordEl) {
-        wordEl.classList.add('highlight');
+        // No .highlight class added here for client.
 
-        // Handle 'read' opacity
+        // Mark words as read (faded) for tracking
         for (let i = 0; i < index; i++) {
             const prevEl = document.getElementById(`word-${i}`);
             if (prevEl) prevEl.classList.add('read');
         }
 
-        // Auto-scroll logic (center the highlighted word)
+        // Keep Auto-scroll so the screen moves with you
         wordEl.scrollIntoView({
             behavior: 'smooth',
             block: 'center',
