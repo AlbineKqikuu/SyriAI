@@ -19,10 +19,11 @@ const stopBtn = document.getElementById('stop-btn');
 const mirrorBtn = document.getElementById('mirror-btn');
 const video = document.getElementById('webcam-feed');
 const statusBadge = document.getElementById('connection-status');
-const clockDisplay = document.getElementById('live-clock');
+const clockDisplay = document.getElementById('digital-clock');
 
 // Digital Clock Logic
 function updateClock() {
+    if (!clockDisplay) return;
     const now = new Date();
     clockDisplay.innerText = now.toLocaleTimeString('sq-AL');
 }
@@ -40,6 +41,7 @@ let currentWordIndex = 0;
 let startTime = null;
 let totalMatches = 0;
 let totalAttempts = 0;
+let isSyncingScroll = false;
 
 // Update UI on start
 startBtn.addEventListener('click', () => {
@@ -58,15 +60,6 @@ startBtn.addEventListener('click', () => {
     } catch (e) {
         console.error("Recognition already started or error:", e);
     }
-
-    // Start Webcam & Mic
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-            video.srcObject = stream;
-        }).catch(err => {
-            console.error("Webcam/Mic error:", err);
-            statusBadge.innerText = "Error: Pajisjet nuk u gjetën";
-        });
 
     // Ensure Client is in the right mode (if PDF is active, show it)
     if (currentPdf) {
@@ -243,10 +236,18 @@ function scrollToWord(index) {
 // Video and Canvas Overlay Setup
 const outputCanvas = document.getElementById('output-canvas');
 const outCtx = outputCanvas.getContext('2d');
+const adminOutputCanvas = document.getElementById('admin-output-canvas');
+const adminOutCtx = adminOutputCanvas.getContext('2d');
 const gazeCanvas = document.getElementById('gaze-canvas');
 const gazeCtx = gazeCanvas.getContext('2d');
+const adminDrawGlass = document.getElementById('admin-drawglass');
+const adminDrawCtx = adminDrawGlass.getContext('2d');
+const adminCursor = document.getElementById('admin-cursor');
+const adminCursorCtx = adminCursor.getContext('2d');
 const aiStatus = document.getElementById('ai-status');
+const adminAiStatus = document.getElementById('admin-ai-status');
 const moodFeedback = document.getElementById('mood-feedback');
+const adminMoodFeedback = document.getElementById('admin-mood-feedback');
 const blurBtn = document.getElementById('blur-btn');
 const studioBgBtn = document.getElementById('studio-bg-btn');
 const recordBtn = document.getElementById('record-btn');
@@ -312,6 +313,17 @@ viewDocBtn.addEventListener('click', () => {
     pdfViewMain.style.display = 'block';
     renderMainPdf(); // Initial continuous render
     broadcastUpdate('view_mode', 'doc');
+});
+
+// Manual Scroll Sync (Admin -> Client)
+pdfViewMain.addEventListener('scroll', () => {
+    if (isSyncingScroll) return;
+    broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+});
+
+scrollContainer.addEventListener('scroll', () => {
+    if (isSyncingScroll) return;
+    broadcastUpdate('text_scroll', scrollContainer.scrollTop);
 });
 
 // Removed side-to-side PDF buttons logic as we now use vertical scroll
@@ -398,6 +410,20 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 let isBlurActive = false;
 let isStudioBgActive = false;
 let isRecording = false;
+let isDrawMode = false;
+const drawModeBtn = document.getElementById('draw-mode-btn');
+
+if (drawModeBtn) {
+    drawModeBtn.addEventListener('click', () => {
+        isDrawMode = !isDrawMode;
+        console.log("Draw Mode Toggled:", isDrawMode);
+        drawModeBtn.classList.toggle('active', isDrawMode);
+        // Visual indicator in AI status
+        if (adminMoodFeedback) {
+            adminMoodFeedback.innerText = isDrawMode ? "MODI: VIZATIM (ON)" : "MODI: POINTER (OFF)";
+        }
+    });
+}
 let mediaRecorder;
 let recordedChunks = [];
 
@@ -412,25 +438,43 @@ selfieSegmentation.setOptions({ modelSelection: 1 });
 selfieSegmentation.onResults(onSegmentationResults);
 
 function onSegmentationResults(results) {
+    if (!outCtx) return;
+
     outCtx.save();
     outCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
-    outCtx.drawImage(results.segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
 
-    outCtx.globalCompositeOperation = 'source-out';
-    if (isBlurActive) {
-        outCtx.filter = 'blur(15px)';
+    if (!isBlurActive && !isStudioBgActive) {
+        // Mode 1: Normal Camera (No Effects)
         outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
-        outCtx.filter = 'none';
-    } else if (isStudioBgActive) {
-        drawProfessionalStudio(outCtx, outputCanvas.width, outputCanvas.height);
     } else {
-        outCtx.fillStyle = 'black';
-        outCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-    }
+        // Mode 2 & 3: Background Effects
+        // 1. Draw the background effect (where the person IS NOT)
+        outCtx.globalCompositeOperation = 'source-over';
+        if (isBlurActive) {
+            outCtx.filter = 'blur(15px)';
+            outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+            outCtx.filter = 'none';
+        } else if (isStudioBgActive) {
+            drawProfessionalStudio(outCtx, outputCanvas.width, outputCanvas.height);
+        }
 
-    outCtx.globalCompositeOperation = 'destination-atop';
-    outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+        // 2. Clear out the area where the person IS
+        outCtx.globalCompositeOperation = 'destination-out';
+        outCtx.drawImage(results.segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
+
+        // 3. Draw the person back in
+        outCtx.globalCompositeOperation = 'destination-over';
+        outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+    }
     outCtx.restore();
+
+    // Sync to Admin Main View
+    if (adminOutCtx && adminOutputCanvas) {
+        adminOutCtx.save();
+        adminOutCtx.clearRect(0, 0, adminOutputCanvas.width, adminOutputCanvas.height);
+        adminOutCtx.drawImage(outputCanvas, 0, 0, adminOutputCanvas.width, adminOutputCanvas.height);
+        adminOutCtx.restore();
+    }
 }
 
 function drawProfessionalStudio(ctx, w, h) {
@@ -477,6 +521,124 @@ function drawProfessionalStudio(ctx, w, h) {
     ctx.shadowBlur = 0;
 }
 
+// --- Hand Tracking & Drawing (Admin -> Client) ---
+const hands = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.6,
+    minTrackingConfidence: 0.5
+});
+
+hands.onResults(onHandResults);
+
+let lastHandX = null;
+let lastHandY = null;
+
+function onHandResults(results) {
+    // Smart resize: Only resize if dimensions changed to avoid clearing canvas every frame
+    if (adminDrawGlass.width !== adminDrawGlass.clientWidth || adminDrawGlass.height !== adminDrawGlass.clientHeight) {
+        resizeAdminCanvas();
+    }
+
+    // Clear cursor feedback every frame for smoothness
+    adminCursorCtx.clearRect(0, 0, adminCursor.width, adminCursor.height);
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        const indexTip = landmarks[8];
+        const indexPip = landmarks[6];
+        const middleTip = landmarks[12];
+        const middlePip = landmarks[10];
+
+        // Detection: Is finger extended? (Adding buffer for stability)
+        const isIndexExtended = indexTip.y < indexPip.y - 0.02;
+        const isMiddleExtended = middleTip.y < middlePip.y - 0.02;
+
+        // Palm Open Check (for clearing - 4 or more fingers up)
+        const tips = [8, 12, 16, 20];
+        let extendedCount = 0;
+        tips.forEach(t => {
+            if (landmarks[t].y < landmarks[t - 2].y - 0.02) extendedCount++;
+        });
+        const isPalmOpen = extendedCount >= 4;
+
+        // Normalized mirrored coordinates
+        const nx = 1 - indexTip.x;
+        const ny = indexTip.y;
+
+        // Visual Feedback Dot (on admin cursor canvas)
+        adminCursorCtx.save();
+        adminCursorCtx.beginPath();
+        adminCursorCtx.arc(nx * adminCursor.width, ny * adminCursor.height, 8, 0, Math.PI * 2);
+
+        // Color Feedback: Red for Draw, Green for Laser, Blue for Clear
+        if (isPalmOpen) {
+            adminCursorCtx.fillStyle = "#007aff";
+        } else if (isIndexExtended) {
+            adminCursorCtx.fillStyle = isDrawMode ? "#ff3b30" : "rgba(255, 255, 255, 0.8)";
+        } else {
+            adminCursorCtx.fillStyle = "rgba(255,255,255,0.4)";
+        }
+
+        adminCursorCtx.shadowBlur = 10;
+        adminCursorCtx.shadowColor = "white";
+        adminCursorCtx.fill();
+        adminCursorCtx.restore();
+
+        // Broadcast Pointer Position
+        broadcastUpdate('cursor_pos', { nx, ny, visible: true });
+
+        // 1. CLEAR: Palm Open
+        if (isPalmOpen) {
+            adminDrawCtx.clearRect(0, 0, adminDrawGlass.width, adminDrawGlass.height);
+            broadcastUpdate('clear_draw', true);
+            lastHandX = null;
+            lastHandY = null;
+            return;
+        }
+
+        // 2. DRAW / POINT: If Index is up
+        if (isIndexExtended) {
+            // Laser pointer logic is handled by adminCursorCtx above
+
+            // If Draw Mode is ON, we draw. We no longer strictly require index ONLY,
+            // trusting the user's toggle state.
+            if (isDrawMode && lastHandX !== null) {
+                adminDrawCtx.beginPath();
+                adminDrawCtx.moveTo(lastHandX * adminDrawGlass.width, lastHandY * adminDrawGlass.height);
+                adminDrawCtx.lineTo(nx * adminDrawGlass.width, ny * adminDrawGlass.height);
+                adminDrawCtx.strokeStyle = '#ff3b30';
+                adminDrawCtx.lineWidth = 6;
+                adminDrawCtx.lineCap = 'round';
+                adminDrawCtx.lineJoin = 'round';
+                adminDrawCtx.stroke();
+
+                broadcastUpdate('draw_segment', {
+                    x1: lastHandX,
+                    y1: lastHandY,
+                    x2: nx,
+                    y2: ny,
+                    color: '#ff3b30'
+                });
+            }
+            lastHandX = nx;
+            lastHandY = ny;
+        } else {
+            // IDLE
+            lastHandX = null;
+            lastHandY = null;
+        }
+    } else {
+        lastHandX = null;
+        lastHandY = null;
+        broadcastUpdate('cursor_pos', { visible: false });
+    }
+}
+
 // MediaPipe Face Mesh Setup
 const faceMesh = new FaceMesh({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -495,13 +657,22 @@ function onFaceResults(results) {
         const landmarks = results.multiFaceLandmarks[0];
         aiStatus.innerText = "Gaze Tracking: Active";
         aiStatus.style.color = "var(--success-color)";
+        if (adminAiStatus) {
+            adminAiStatus.innerText = "Gaze Tracking: Active";
+            adminAiStatus.style.color = "var(--success-color)";
+        }
 
         drawGazeHUD(landmarks[468], landmarks[473]);
         updateMood(landmarks);
     } else {
         aiStatus.innerText = "Gaze Tracking: Searching...";
         aiStatus.style.color = "var(--danger-color)";
+        if (adminAiStatus) {
+            adminAiStatus.innerText = "Gaze Tracking: Searching...";
+            adminAiStatus.style.color = "var(--danger-color)";
+        }
         moodFeedback.innerText = "Mood: Calibrating...";
+        if (adminMoodFeedback) adminMoodFeedback.innerText = "Mood: Calibrating...";
     }
 }
 
@@ -535,6 +706,7 @@ function updateMood(landmarks) {
     if (!isLookingCentrally) feedback += " | SHIKO KAMERËN! 👁️";
 
     moodFeedback.innerText = feedback;
+    if (adminMoodFeedback) adminMoodFeedback.innerText = feedback;
 }
 
 // File Upload Handling
@@ -671,6 +843,12 @@ studioBgBtn.addEventListener('click', () => {
     blurBtn.classList.remove('active');
 });
 
+const clearDrawBtn = document.getElementById('clear-client-draw-btn');
+clearDrawBtn.addEventListener('click', () => {
+    adminDrawCtx.clearRect(0, 0, adminDrawGlass.width, adminDrawGlass.height);
+    broadcastUpdate('clear_draw', true);
+});
+
 // Keyboard & Remote Navigation
 window.addEventListener('keydown', (e) => {
     // Avoid navigation when typing
@@ -706,11 +884,49 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
+// --- Admin Drawing Sync (to see client markings) ---
+function resizeAdminCanvas() {
+    if (!adminDrawGlass || !adminCursor) return;
+    adminDrawGlass.width = adminDrawGlass.clientWidth;
+    adminDrawGlass.height = adminDrawGlass.clientHeight;
+    adminCursor.width = adminDrawGlass.clientWidth;
+    adminCursor.height = adminDrawGlass.clientHeight;
+}
+window.addEventListener('resize', resizeAdminCanvas);
+resizeAdminCanvas();
+setTimeout(resizeAdminCanvas, 1000); // Robust resize after layout
+
 syncChannel.onmessage = (event) => {
     const { type, data } = event.data;
     const isDocMode = viewDocBtn.classList.contains('active');
 
-    if (type === 'nav_next') {
+    if (type === 'draw_segment') {
+        const { x1, y1, x2, y2, color } = data;
+        adminDrawCtx.beginPath();
+        adminDrawCtx.moveTo(x1 * adminDrawGlass.width, y1 * adminDrawGlass.height);
+        adminDrawCtx.lineTo(x2 * adminDrawGlass.width, y2 * adminDrawGlass.height);
+        adminDrawCtx.strokeStyle = color;
+        adminDrawCtx.lineWidth = 6;
+        adminDrawCtx.lineCap = 'round';
+        adminDrawCtx.lineJoin = 'round';
+        adminDrawCtx.shadowBlur = 10;
+        adminDrawCtx.shadowColor = 'rgba(255, 59, 48, 0.6)';
+        adminDrawCtx.stroke();
+    }
+    else if (type === 'cursor_pos') {
+        const { nx, ny } = data;
+        // The adminCursor is cleared by the admin's own hand results every frame,
+        // but since they might not be using their hand, we should clear it here if needed
+        // or just draw the client dot. 
+        adminCursorCtx.beginPath();
+        adminCursorCtx.arc(nx * adminCursor.width, ny * adminCursor.height, 8, 0, Math.PI * 2);
+        adminCursorCtx.fillStyle = "rgba(52, 199, 89, 0.6)"; // Green for client
+        adminCursorCtx.fill();
+    }
+    else if (type === 'clear_draw') {
+        adminDrawCtx.clearRect(0, 0, adminDrawGlass.width, adminDrawGlass.height);
+    }
+    else if (type === 'nav_next') {
         if (isDocMode) {
             pdfViewMain.scrollTop += 150;
             broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
@@ -733,7 +949,14 @@ syncChannel.onmessage = (event) => {
         }
     }
     else if (type === 'pdf_scroll') {
+        isSyncingScroll = true;
         pdfViewMain.scrollTop = data;
+        setTimeout(() => isSyncingScroll = false, 50);
+    }
+    else if (type === 'text_scroll') {
+        isSyncingScroll = true;
+        scrollContainer.scrollTop = data;
+        setTimeout(() => isSyncingScroll = false, 50);
     }
     else if (type === 'client_ready') {
         // When client connects, wait a tiny bit then send state
@@ -750,21 +973,34 @@ syncChannel.onmessage = (event) => {
     }
 };
 
-// Start MediaPipe
-startBtn.addEventListener('click', () => {
-    // ... (Previous logic remains)
+// Start MediaPipe & Camera Automatically
+function initCamera() {
     outputCanvas.width = 640;
     outputCanvas.height = 480;
     gazeCanvas.width = 640;
     gazeCanvas.height = 480;
+    adminOutputCanvas.width = 1280;
+    adminOutputCanvas.height = 720;
 
-    const camera = new Camera(video, {
-        onFrame: async () => {
-            await selfieSegmentation.send({ image: video });
-            await faceMesh.send({ image: video });
-        },
-        width: 640,
-        height: 480
-    });
-    camera.start();
-});
+    // Only request video unless user clicks start recording (to prevent mic blocking issues)
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(stream => {
+            localStream = stream; // Store globally
+            video.srcObject = stream;
+            const camera = new Camera(video, {
+                onFrame: async () => {
+                    await selfieSegmentation.send({ image: video });
+                    await faceMesh.send({ image: video });
+                    await hands.send({ image: video });
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start();
+        }).catch(err => {
+            console.error("Webcam error:", err);
+            if (connectionStatus) connectionStatus.innerText = "Error: Kamera nuk u gjet";
+        });
+}
+
+window.addEventListener('load', initCamera);
