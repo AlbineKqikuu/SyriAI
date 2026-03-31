@@ -14,6 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
         crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     <style>
         body {
             display: flex;
@@ -183,9 +185,17 @@
         </div>
     </div>
 
+    <!-- LOWER THIRDS OVERLAY -->
+    <div id="lower-third" class="lower-third-banner" style="display: none;">
+        <div class="lt-gradient"></div>
+        <div class="lt-content">
+            <div class="lt-name" id="lt-name-display">EMRI JUAJ</div>
+            <div class="lt-title" id="lt-title-display">Gazetar / Prezantues</div>
+        </div>
+        <div class="lt-logo">Syri<span>AI</span></div>
+    </div>
+
     <script src="client.js"></script>
 </body>
-
-</html>
 
 </html>

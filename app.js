@@ -21,6 +21,73 @@ const video = document.getElementById('webcam-feed');
 const statusBadge = document.getElementById('connection-status');
 const clockDisplay = document.getElementById('digital-clock');
 
+// Video and Canvas Overlay Setup
+const outputCanvas = document.getElementById('output-canvas');
+const outCtx = outputCanvas.getContext('2d');
+const adminOutputCanvas = document.getElementById('admin-output-canvas');
+const adminOutCtx = adminOutputCanvas.getContext('2d');
+const gazeCanvas = document.getElementById('gaze-canvas');
+const gazeCtx = gazeCanvas.getContext('2d');
+const adminDrawGlass = document.getElementById('admin-drawglass');
+const adminDrawCtx = adminDrawGlass.getContext('2d');
+const adminCursor = document.getElementById('admin-cursor');
+const adminCursorCtx = adminCursor.getContext('2d');
+const aiStatus = document.getElementById('ai-status');
+const adminAiStatus = document.getElementById('admin-ai-status');
+const moodFeedback = document.getElementById('mood-feedback');
+const adminMoodFeedback = document.getElementById('admin-mood-feedback');
+const blurBtn = document.getElementById('blur-btn');
+const studioBgBtn = document.getElementById('studio-bg-btn');
+const recordBtn = document.getElementById('record-btn');
+const fileUpload = document.getElementById('file-upload');
+const uploadTrigger = document.getElementById('upload-trigger');
+const connectionStatus = document.getElementById('connection-status');
+
+// New UI Elements for Main PDF View
+const pdfViewMain = document.getElementById('pdf-view-main');
+const pdfMainCanvas = document.getElementById('pdf-main-canvas');
+const pdfMainCtx = pdfMainCanvas.getContext('2d');
+const mainPdfNum = document.getElementById('main-pdf-num');
+const mainPrevBtn = document.getElementById('main-prev-pdf');
+const mainNextBtn = document.getElementById('main-next-pdf');
+const viewTextBtn = document.getElementById('view-text-btn');
+const viewDocBtn = document.getElementById('view-doc-btn');
+const openClientBtn = document.getElementById('open-client-btn');
+
+// Slide Visual Logic
+const slideOverlay = document.getElementById('slide-overlay');
+const slideCanvas = document.getElementById('slide-canvas');
+const slideCtx = slideCanvas.getContext('2d');
+const slideNumDisplay = document.getElementById('slide-num');
+const prevSlideBtn = document.getElementById('prev-slide');
+const nextSlideBtn = document.getElementById('next-slide');
+const closeSlideBtn = document.getElementById('close-slide');
+
+// Auto-Scroll Logic
+const autoScrollBtn = document.getElementById('autoscroll-btn');
+const scrollSpeedInput = document.getElementById('scroll-speed');
+const speedValDisplay = document.getElementById('speed-val');
+
+let words = [];
+let pageWordBoundaries = [];
+let allWordPositions = []; 
+let currentWordIndex = 0;
+let startTime = null;
+let totalMatches = 0;
+let totalAttempts = 0;
+let isSyncingScroll = false;
+let localStream = null;
+let isAutoScrolling = false;
+let scrollSpeed = 10; 
+let lastScrollTime = 0;
+let currentPdf = null;
+let currentSlideNum = 1;
+let isBlurActive = false;
+let isStudioBgActive = false;
+let isRecording = false;
+let isDrawMode = false;
+const drawModeBtn = document.getElementById('draw-mode-btn');
+
 // Digital Clock Logic
 function updateClock() {
     if (!clockDisplay) return;
@@ -35,16 +102,6 @@ mirrorBtn.addEventListener('click', () => {
     document.body.classList.toggle('mirrored');
     mirrorBtn.classList.toggle('active-btn');
 });
-
-let words = [];
-let pageWordBoundaries = [];
-let allWordPositions = []; // Detailed PDF word coordinates
-let currentWordIndex = 0;
-let startTime = null;
-let totalMatches = 0;
-let totalAttempts = 0;
-let isSyncingScroll = false;
-let localStream = null;
 
 // Update UI on start
 startBtn.addEventListener('click', () => {
@@ -102,6 +159,45 @@ fontSizeInput.addEventListener('input', (e) => {
     broadcastUpdate('font_size', e.target.value);
 });
 
+// Auto-Scroll Logic (moved to top)
+
+autoScrollBtn.addEventListener('click', () => {
+    isAutoScrolling = !isAutoScrolling;
+    autoScrollBtn.classList.toggle('active', isAutoScrolling);
+    if (isAutoScrolling) {
+        requestAnimationFrame(scrollStep);
+    }
+    broadcastUpdate('autoscroll_sync', isAutoScrolling);
+});
+
+scrollSpeedInput.addEventListener('input', (e) => {
+    scrollSpeed = parseInt(e.target.value);
+    speedValDisplay.innerText = scrollSpeed;
+    broadcastUpdate('scroll_speed_sync', scrollSpeed);
+});
+
+function scrollStep(timestamp) {
+    if (!isAutoScrolling) return;
+
+    if (!lastScrollTime) lastScrollTime = timestamp;
+    const deltaTime = timestamp - lastScrollTime;
+    lastScrollTime = timestamp;
+
+    const scrollAmount = (scrollSpeed / 10) * (deltaTime / 16.67); // Normalized to 60fps
+    
+    const isDocMode = viewDocBtn.classList.contains('active');
+    const container = isDocMode ? pdfViewMain : scrollContainer;
+
+    if (container) {
+        container.scrollTop += scrollAmount;
+        // Sync to client
+        if (isDocMode) broadcastUpdate('pdf_scroll', container.scrollTop);
+        else broadcastUpdate('text_scroll', container.scrollTop);
+    }
+
+    requestAnimationFrame(scrollStep);
+}
+
 scriptInput.addEventListener('input', () => {
     const text = scriptInput.value;
     words = text.trim().split(/\s+/).filter(w => w.length > 0);
@@ -130,8 +226,36 @@ recognition.onresult = (event) => {
     }
 
     const spokenLower = currentInterim.toLowerCase().trim();
+
+    // AI Voice Commands: Control with Speech
+    if (spokenLower.includes('stop prompter') || spokenLower.includes('stop gazeta')) {
+        isAutoScrolling = false;
+        if (autoScrollBtn) autoScrollBtn.classList.remove('active');
+        broadcastUpdate('autoscroll_sync', false);
+        return;
+    }
+    if (spokenLower.includes('fillo prompter') || spokenLower.includes('start prompter') || spokenLower.includes('start gazeta')) {
+        if (!isAutoScrolling) {
+            isAutoScrolling = true;
+            if (autoScrollBtn) autoScrollBtn.classList.add('active');
+            requestAnimationFrame(scrollStep);
+            broadcastUpdate('autoscroll_sync', true);
+        }
+        return;
+    }
+
     if (spokenLower) {
         matchAndScroll(spokenLower);
+        
+        // Dynamic HUD Feedback for "Speaking" state
+        const videoSegment = document.getElementById('admin-video-segment');
+        if (videoSegment) {
+            videoSegment.classList.add('speaking');
+            clearTimeout(videoSegment.speechTimeout);
+            videoSegment.speechTimeout = setTimeout(() => {
+                videoSegment.classList.remove('speaking');
+            }, 1000);
+        }
     }
 };
 
@@ -299,56 +423,33 @@ function scrollToWord(index) {
     }
 
     if (wordEl) {
-        wordEl.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
-        });
+        // High-performance scroll: use 'instant' if we are moving too fast,
+        // or a faster smooth behavior manually.
+        // For now, we'll use 'smooth' but with a check.
+        const rect = wordEl.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        
+        // Only scroll if it's not already in the center region
+        if (Math.abs(rect.top - (containerRect.top + containerRect.height / 2)) > 100) {
+            wordEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
     }
 }
-// Video and Canvas Overlay Setup
-const outputCanvas = document.getElementById('output-canvas');
-const outCtx = outputCanvas.getContext('2d');
-const adminOutputCanvas = document.getElementById('admin-output-canvas');
-const adminOutCtx = adminOutputCanvas.getContext('2d');
-const gazeCanvas = document.getElementById('gaze-canvas');
-const gazeCtx = gazeCanvas.getContext('2d');
-const adminDrawGlass = document.getElementById('admin-drawglass');
-const adminDrawCtx = adminDrawGlass.getContext('2d');
-const adminCursor = document.getElementById('admin-cursor');
-const adminCursorCtx = adminCursor.getContext('2d');
-const aiStatus = document.getElementById('ai-status');
-const adminAiStatus = document.getElementById('admin-ai-status');
-const moodFeedback = document.getElementById('mood-feedback');
-const adminMoodFeedback = document.getElementById('admin-mood-feedback');
-const blurBtn = document.getElementById('blur-btn');
-const studioBgBtn = document.getElementById('studio-bg-btn');
-const recordBtn = document.getElementById('record-btn');
-const fileUpload = document.getElementById('file-upload');
-const uploadTrigger = document.getElementById('upload-trigger');
-const connectionStatus = document.getElementById('connection-status');
-
-// New UI Elements for Main PDF View
-const pdfViewMain = document.getElementById('pdf-view-main');
-const pdfMainCanvas = document.getElementById('pdf-main-canvas');
-const pdfMainCtx = pdfMainCanvas.getContext('2d');
-const mainPdfNum = document.getElementById('main-pdf-num');
-const mainPrevBtn = document.getElementById('main-prev-pdf');
-const mainNextBtn = document.getElementById('main-next-pdf');
-const viewTextBtn = document.getElementById('view-text-btn');
-const viewDocBtn = document.getElementById('view-doc-btn');
-const openClientBtn = document.getElementById('open-client-btn');
+// (Elements moved to top)
 
 async function renderMainPdf() {
     if (!currentPdf) return;
     pdfViewMain.innerHTML = ''; // Clear admin
-    broadcastUpdate('pdf_clear', true); // Clear client
-
+    
+    // We only need to render locally for the Admin. 
+    // The client now renders its own pages via 'pdf_buffer_sync'.
     for (let i = 1; i <= currentPdf.numPages; i++) {
         const page = await currentPdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 });
+        const viewport = page.getViewport({ scale: 1.5 }); // Admin can have lower scale for performance
 
-        // Create container for page and highlight layer
         const container = document.createElement('div');
         container.className = 'pdf-page-container';
         container.id = `pdf-page-${i}`;
@@ -359,7 +460,6 @@ async function renderMainPdf() {
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        // Create the highlight overlay
         const highlight = document.createElement('div');
         highlight.className = 'pdf-highlight';
         highlight.id = `pdf-hl-${i}`;
@@ -369,14 +469,6 @@ async function renderMainPdf() {
         pdfViewMain.appendChild(container);
 
         await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-        // Broadcast page to client
-        const pageData = canvas.toDataURL('image/webp', 0.6);
-        broadcastUpdate('pdf_page_chunk', { image: pageData, page: i });
-
-        if (i === 1) {
-            broadcastUpdate('view_mode', 'doc');
-        }
     }
 }
 
@@ -418,17 +510,9 @@ scrollContainer.addEventListener('scroll', () => {
 // Removed side-to-side PDF buttons logic as we now use vertical scroll
 
 
-// Slide Visual Logic
-const slideOverlay = document.getElementById('slide-overlay');
-const slideCanvas = document.getElementById('slide-canvas');
-const slideCtx = slideCanvas.getContext('2d');
-const slideNumDisplay = document.getElementById('slide-num');
-const prevSlideBtn = document.getElementById('prev-slide');
-const nextSlideBtn = document.getElementById('next-slide');
-const closeSlideBtn = document.getElementById('close-slide');
+// (Elements moved to top)
 
-let currentPdf = null;
-let currentSlideNum = 1;
+// PDF State (moved to top)
 
 async function renderSlide(num) {
     if (!currentPdf) return;
@@ -496,11 +580,7 @@ let recorder;
 // PDF.js Worker Setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-let isBlurActive = false;
-let isStudioBgActive = false;
-let isRecording = false;
-let isDrawMode = false;
-const drawModeBtn = document.getElementById('draw-mode-btn');
+// Studio State (moved to top)
 
 if (drawModeBtn) {
     drawModeBtn.addEventListener('click', () => {
@@ -547,13 +627,19 @@ function onSegmentationResults(results) {
             drawProfessionalStudio(outCtx, outputCanvas.width, outputCanvas.height);
         }
 
-        // 2. Clear out the area where the person IS
-        outCtx.globalCompositeOperation = 'destination-out';
-        outCtx.drawImage(results.segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
-
-        // 3. Draw the person back in
-        outCtx.globalCompositeOperation = 'destination-over';
-        outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+        // 2. Clear out the area where the person IS (if we have a mask)
+        if (results.segmentationMask) {
+            outCtx.globalCompositeOperation = 'destination-out';
+            outCtx.drawImage(results.segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
+            
+            // 3. Draw the person back in
+            outCtx.globalCompositeOperation = 'destination-over';
+            outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+        } else {
+            // If no mask, just draw the image normally over the background (or just the image)
+            // But usually this branch only happens if no effects active, which is handled earlier.
+            outCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
+        }
     }
     outCtx.restore();
 
@@ -614,11 +700,10 @@ function drawProfessionalStudio(ctx, w, h) {
 const hands = new Hands({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
-
 hands.setOptions({
     maxNumHands: 1,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.6,
+    modelComplexity: 0, // 0 = Fastest (Great for TVs), 1 = Optimal
+    minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
 
@@ -734,7 +819,7 @@ const faceMesh = new FaceMesh({
 });
 faceMesh.setOptions({
     maxNumFaces: 1,
-    refineLandmarks: true,
+    refineLandmarks: true, // Keep for gaze but complexity 0 is implied by faceMesh defaults
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
@@ -812,9 +897,13 @@ fileUpload.addEventListener('change', async (e) => {
         reader.onload = async function () {
             try {
                 const typedArray = new Uint8Array(this.result);
+                
+                // BROADCAST FIRST! Before PDF.js detaches/consumes the buffer
+                broadcastUpdate('pdf_buffer_sync', { buffer: typedArray });
+
                 // Enhanced robust way to initialize PDF.js for text extraction
                 const loadingTask = pdfjsLib.getDocument({
-                    data: typedArray,
+                    data: typedArray.slice(0), // Use a slice/copy here to be 100% safe from detachment
                     disableFontFace: true,
                     nativeImageDecoderSupport: 'none'
                 });
@@ -884,6 +973,8 @@ fileUpload.addEventListener('change', async (e) => {
                 // Visual Slide Setup
                 currentPdf = pdf;
                 currentSlideNum = 1;
+
+                // (Broadcast moved to top for performance)
 
                 // Automatically switch to DOCUMENT View
                 viewDocBtn.click();
@@ -1096,15 +1187,33 @@ syncChannel.onmessage = (event) => {
     }
     else if (type === 'client_ready') {
         // When client connects, wait a tiny bit then send state
-        setTimeout(() => {
+        setTimeout(async () => {
             const isDoc = viewDocBtn.classList.contains('active');
-            if (currentPdf && isDoc) renderMainPdf();
+            
+            // IF A PDF IS LOADED, SEND THE RAW DATA AGAIN FOR THE NEW TAB
+            if (currentPdf) {
+                const data = await currentPdf.getData();
+                broadcastUpdate('pdf_buffer_sync', { buffer: data });
+            }
+
             broadcastUpdate('view_mode', isDoc ? 'doc' : 'text');
             broadcastUpdate('font_size', fontSizeInput.value);
-            // Repost script content just in case
+            
+            // Send current script
             const text = scriptInput.value;
             const wordsList = text.trim().split(/\s+/).filter(w => w.length > 0);
             renderScript(wordsList);
+            
+            // Sync current scroll position
+            broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
+            broadcastUpdate('text_scroll', scrollContainer.scrollTop);
+
+            // SYNC LOWER THIRD (BANNER) STATE
+            broadcastUpdate('lt_sync', {
+                show: ltBanner.style.display === 'flex',
+                name: ltNameInput.value || "EMRI JUAJ",
+                title: ltTitleInput.value || "Gazetar / Prezantues"
+            });
         }, 300);
     }
 };
@@ -1118,15 +1227,57 @@ function initCamera() {
     adminOutputCanvas.width = 1280;
     adminOutputCanvas.height = 720;
 
-    // Request video AND audio for full studio recording and better mic initialization
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    // Visual feedback for fast start
+    if (connectionStatus) connectionStatus.innerText = "⏳ Kamera po ndizet...";
+
+    // Request exact resolution for faster hardware initialization
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            width: { ideal: 640 }, 
+            height: { ideal: 480 },
+            frameRate: { ideal: 30 }
+        }, 
+        audio: true 
+    })
         .then(stream => {
             localStream = stream; // Store globally
             video.srcObject = stream;
+            
+            // --- INSTANT PREVIEW LOOP ---
+            // Draw raw video to canvas immediately while models load
+            let isModelReady = false;
+            function instantPreview() {
+                if (isModelReady) return; // Stop this loop once MediaPipe takes over
+                
+                // Draw to Admin Canvas
+                adminOutCtx.save();
+                adminOutCtx.scale(-1, 1);
+                adminOutCtx.drawImage(video, -adminOutputCanvas.width, 0, adminOutputCanvas.width, adminOutputCanvas.height);
+                adminOutCtx.restore();
+
+                // Draw to Recording/Public Canvas
+                outCtx.drawImage(video, 0, 0, outputCanvas.width, outputCanvas.height);
+                
+                requestAnimationFrame(instantPreview);
+            }
+            instantPreview();
+
             const camera = new Camera(video, {
                 onFrame: async () => {
-                    await selfieSegmentation.send({ image: video });
+                    isModelReady = true; // MediaPipe is now processing
+                    
+                    // PERFORMANCE TWEAK: Only run segmentation if background effects are active
+                    if (isBlurActive || isStudioBgActive) {
+                        await selfieSegmentation.send({ image: video });
+                    } else {
+                        // Fallback: manually draw normal camera if no segmentation
+                        onSegmentationResults({ image: video, segmentationMask: null });
+                    }
+
+                    // Always run face mesh (gaze tracking) as it's the core feature
                     await faceMesh.send({ image: video });
+
+                    // Run hands only if we need them (Always needed for pointer/feedback, but we can throttle)
                     await hands.send({ image: video });
                 },
                 width: 640,
@@ -1140,3 +1291,52 @@ function initCamera() {
 }
 
 window.addEventListener('load', initCamera);
+
+// --- LOWER THIRDS UI LOGIC ---
+const toggleLTBtn = document.getElementById('toggle-lt-btn');
+const ltNameInput = document.getElementById('lt-name-input');
+const ltTitleInput = document.getElementById('lt-title-input');
+const ltBanner = document.getElementById('lower-third');
+
+// Live Update as you type
+function updateLTDisplay() {
+    const name = ltNameInput.value || "EMRI JUAJ";
+    const title = ltTitleInput.value || "Gazetar / Prezantues";
+    const isShowing = ltBanner.style.display === 'flex';
+
+    document.getElementById('lt-name-display').innerText = name;
+    document.getElementById('lt-title-display').innerText = title;
+    
+    // Broadcast live update to client
+    broadcastUpdate('lt_sync', { show: isShowing, name, title });
+}
+
+if (ltNameInput) ltNameInput.addEventListener('input', updateLTDisplay);
+if (ltTitleInput) ltTitleInput.addEventListener('input', updateLTDisplay);
+
+if (toggleLTBtn) {
+    toggleLTBtn.addEventListener('click', () => {
+        const isShowing = ltBanner.style.display === 'flex';
+        ltBanner.style.display = isShowing ? 'none' : 'flex';
+        
+        toggleLTBtn.innerText = isShowing ? "📛 Shfaq Banner-in" : "❌ Hiqe Banner-in";
+        toggleLTBtn.classList.toggle('active', !isShowing);
+
+        updateLTDisplay(); // Update & sync
+    });
+}
+
+// Update the sync handler to include lt_sync
+const originalOnMessage = syncChannel.onmessage;
+syncChannel.onmessage = (event) => {
+    if (originalOnMessage) originalOnMessage(event);
+    const { type, data } = event.data;
+    if (type === 'lt_sync') {
+        const lt = document.getElementById('lower-third');
+        if (lt) {
+            document.getElementById('lt-name-display').innerText = data.name;
+            document.getElementById('lt-title-display').innerText = data.title;
+            lt.style.display = data.show ? 'flex' : 'none';
+        }
+    }
+};

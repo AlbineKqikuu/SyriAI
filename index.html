@@ -100,6 +100,15 @@
                     </div>
                 </div>
 
+                <div class="control-group">
+                    <label>Studio Overlays & Graphics</label>
+                    <div class="graphics-controls" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <input type="text" id="lt-name-input" placeholder="Emri Mbiemri" style="padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff;">
+                        <input type="text" id="lt-title-input" placeholder="Titulli (p.sh. Gazetar)" style="padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff;">
+                        <button id="toggle-lt-btn" class="secondary" style="width: 100%;">📛 Shfaq Banner-in</button>
+                    </div>
+                </div>
+
                 <div class="button-grid">
                     <button id="start-btn">⚡ Fillo LIVE</button>
                     <button id="stop-btn" class="secondary">🛑 STOP</button>
@@ -126,8 +135,19 @@
                 </div>
 
                 <div class="control-group">
+                    <label>Auto-Scroll & Speed</label>
+                    <div class="view-mode-flex" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <button id="autoscroll-btn" class="view-mode-btn" style="flex:1;">🔄 Auto-Scroll</button>
+                    </div>
+                    <div class="speed-control-wrapper">
+                        <label style="font-size: 0.6rem;">Scroll Speed: <span id="speed-val">10</span></label>
+                        <input type="range" id="scroll-speed" min="1" max="100" step="1" value="10">
+                    </div>
+                </div>
+
+                <div class="control-group">
                     <label>Font Size</label>
-                    <input type="range" id="font-size" min="2" max="6" step="0.5" value="3.5">
+                    <input type="range" id="font-size" min="2" max="10" step="0.5" value="3.5">
                 </div>
             </div>
         </aside>
@@ -144,6 +164,16 @@
             </div>
         </div>
     </footer>
+
+    <!-- LOWER THIRDS OVERLAY -->
+    <div id="lower-third" class="lower-third-banner" style="display: none;">
+        <div class="lt-gradient"></div>
+        <div class="lt-content">
+            <div class="lt-name" id="lt-name-display">EMRI JUAJ</div>
+            <div class="lt-title" id="lt-title-display">Gazetar / Prezantues</div>
+        </div>
+        <div class="lt-logo">Syri<span>AI</span></div>
+    </div>
 
 
 

@@ -166,7 +166,7 @@ header {
     padding: 40vh 4rem;
     scroll-behavior: smooth;
     mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
 }
 
 /* PDF Overlay Mode - Teleprompter text floats over PDF */
@@ -331,6 +331,8 @@ header {
     display: inline-block;
     transition: all 0.3s ease;
     filter: blur(0px);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .read {
@@ -345,7 +347,7 @@ header {
     box-shadow: 0 0 40px rgba(0, 122, 255, 0.8), 0 0 10px #fff;
     border-radius: 8px;
     padding: 0 10px;
-    transform: scale(1.1);
+    transform: scale(1.1) translateZ(0);
     z-index: 50;
     opacity: 1 !important;
     filter: blur(0px) !important;
@@ -706,7 +708,9 @@ button.secondary:hover {
 .ticker-track {
     display: inline-flex;
     padding-left: 100%;
-    animation: ticker 30s linear infinite;
+    animation: ticker 20s linear infinite;
+    will-change: transform;
+    transform: translateZ(0); /* Hardware accelerated compositing */
 }
 
 .ticker-track span {
@@ -785,6 +789,103 @@ button.secondary:hover {
     font-size: 0.85rem;
     color: var(--accent-color);
     letter-spacing: 0.5px;
+}
+
+/* --- LOWER THIRDS / NEWS BANNER --- */
+.lower-third-banner {
+    position: fixed;
+    bottom: 80px;
+    left: 4rem;
+    width: 600px;
+    height: 100px;
+    background: rgba(10, 10, 15, 0.7);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    padding-left: 2.5rem;
+    overflow: hidden;
+    animation: slide-in-banner 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 122, 255, 0.2);
+}
+
+@keyframes slide-in-banner {
+    0% { transform: translateX(-110%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+.lt-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 100%;
+    background: var(--accent-color);
+    box-shadow: 0 0 20px var(--accent-color);
+}
+
+.lt-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.lt-name {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.lt-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    background: rgba(0, 122, 255, 0.1);
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.lt-logo {
+    position: absolute;
+    right: 2rem;
+    font-weight: 900;
+    font-size: 1.2rem;
+    opacity: 0.4;
+    letter-spacing: -1px;
+}
+
+.lt-logo span {
+    color: var(--accent-color);
+}
+
+/* AI State HUD Highlights */
+.admin-video-segment.speaking {
+    outline: 4px solid var(--accent-color);
+    outline-offset: -4px;
+    box-shadow: inset 0 0 60px var(--accent-glow);
+}
+
+.admin-video-segment.scolding {
+    outline: 4px solid var(--danger-color);
+    outline-offset: -4px;
+    box-shadow: inset 0 0 60px rgba(255, 59, 48, 0.4);
+}
+
+/* Glassmorphism for inputs */
+input[type="text"] {
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 15px var(--accent-glow);
+    outline: none;
 }
 
 .client-slide-area {

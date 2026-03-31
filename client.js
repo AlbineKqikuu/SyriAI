@@ -15,6 +15,9 @@ const handStatusLabel = document.getElementById('hand-status');
 const cursorGlass = document.getElementById('hand-cursor');
 const cursorCtx = cursorGlass.getContext('2d');
 
+// PDF.js Worker Setup
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
 // Handle sizing for drawing canvas
 function resizeDrawCanvas() {
     drawGlass.width = drawGlass.clientWidth;
@@ -30,6 +33,9 @@ let isSyncingScroll = false;
 let lastFingerY = null;
 let lastFingerX = null;
 let fingerPoints = []; // To draw smooth lines
+let isAutoScrolling = false;
+let scrollSpeed = 10;
+let lastScrollTime = 0;
 
 const hands = new Hands({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
@@ -172,6 +178,13 @@ syncChannel.onmessage = (event) => {
     const { type, data } = event.data;
 
     switch (type) {
+        case 'autoscroll_sync':
+            isAutoScrolling = data;
+            if (isAutoScrolling) requestAnimationFrame(clientScrollStep);
+            break;
+        case 'scroll_speed_sync':
+            scrollSpeed = data;
+            break;
         case 'clear_draw':
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
             break;
@@ -206,47 +219,16 @@ syncChannel.onmessage = (event) => {
                 slideArea.style.display = 'block';
                 if (data.fullView) slideArea.classList.add('full-view');
                 else slideArea.classList.remove('full-view');
-
-                if (data.image) {
-                    const img = new Image();
-                    img.onload = () => {
-                        // For vertical PDF view, we append rather than replace if logic allows, 
-                        // but since the admin sends the full view, we just render what is sent.
-                        slideCanvas.width = img.width;
-                        slideCanvas.height = img.height;
-                        slideCtx.drawImage(img, 0, 0);
-                    };
-                    img.src = data.image;
-                }
             } else {
                 slideArea.style.display = 'none';
                 slideArea.classList.remove('full-view');
             }
             break;
+        case 'pdf_buffer_sync':
+            renderClientPdf(data.buffer);
+            break;
         case 'pdf_page_chunk':
-            // Hide the single slide canvas when doing continuous render
-            slideCanvas.style.display = 'none';
-
-            // Create container for page and highlight layer
-            const container = document.createElement('div');
-            container.className = 'pdf-page-container';
-            container.id = `pdf-page-${data.page}`;
-            container.style.width = '85%';
-            container.style.margin = '20px auto';
-
-            const img = new Image();
-            img.src = data.image;
-            img.className = 'pdf-page-canvas';
-            img.style.display = 'block';
-            img.style.width = '100%';
-
-            const highlight = document.createElement('div');
-            highlight.className = 'pdf-highlight';
-            highlight.id = `pdf-hl-${data.page}`;
-
-            container.appendChild(img);
-            container.appendChild(highlight);
-            slideArea.appendChild(container);
+            // Deprecated - replaced by local rendering for speed
             break;
 
         case 'pdf_word_highlight':
@@ -296,6 +278,14 @@ syncChannel.onmessage = (event) => {
                 cursorCtx.shadowBlur = 10;
                 cursorCtx.shadowColor = "white";
                 cursorCtx.fill();
+            }
+            break;
+        case 'lt_sync':
+            const lt = document.getElementById('lower-third');
+            if (lt) {
+                document.getElementById('lt-name-display').innerText = data.name;
+                document.getElementById('lt-title-display').innerText = data.title;
+                lt.style.display = data.show ? 'flex' : 'none';
             }
             break;
     }
@@ -348,5 +338,65 @@ function highlightWord(index) {
             block: 'center',
             inline: 'nearest'
         });
+    }
+}
+
+function clientScrollStep(timestamp) {
+    if (!isAutoScrolling) return;
+    if (!lastScrollTime) lastScrollTime = timestamp;
+    const deltaTime = timestamp - lastScrollTime;
+    lastScrollTime = timestamp;
+
+    const scrollAmount = (scrollSpeed / 10) * (deltaTime / 16.67);
+    const isDocMode = slideArea.classList.contains('full-view');
+    const container = isDocMode ? slideArea : scrollBox;
+
+    if (container) {
+        container.scrollTop += scrollAmount;
+    }
+
+    requestAnimationFrame(clientScrollStep);
+}
+
+// Local PDF rendering for INSTANT results
+async function renderClientPdf(buffer) {
+    try {
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        slideArea.innerHTML = ''; // Clear
+        slideArea.style.display = 'block';
+        slideArea.classList.add('full-view');
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 2.0 });
+
+            const container = document.createElement('div');
+            container.className = 'pdf-page-container';
+            container.id = `pdf-page-${i}`;
+            container.style.width = '85%';
+            container.style.margin = '20px auto';
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page-canvas';
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const highlight = document.createElement('div');
+            highlight.className = 'pdf-highlight';
+            highlight.id = `pdf-hl-${i}`;
+
+            container.appendChild(canvas);
+            container.appendChild(highlight);
+            slideArea.appendChild(container);
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+        }
+        // Force sync view mode
+        scrollBox.style.display = 'none';
+    } catch (err) {
+        console.error("Client PDF Load Error:", err);
     }
 }
