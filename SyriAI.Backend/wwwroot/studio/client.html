@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyriAI Client - Studio View</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- MediaPipe Hands & Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+        }
+
+        /* Top Header Banner (Full Width, Dark Blue) */
+        .client-header-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 80px;
+            background: #001a33; /* Dark Blue */
+            backdrop-filter: blur(20px);
+            border-bottom: 3px solid #004d99; /* Blue border */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            z-index: 10000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .client-split-container {
+            display: flex;
+            width: 100vw;
+            height: calc(100vh - 160px); /* Room for top (80px) and bottom (80px) */
+            margin-top: 80px;
+        }
+
+        .camera-half {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 2px solid var(--glass-border);
+        }
+
+        #client-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .text-half {
+            flex: 1;
+            background: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .client-scroll-container {
+            flex: 1;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Initial center alignment */
+            padding: 0 2rem;
+            position: relative;
+        }
+
+        #client-script-display {
+            font-size: 3.5rem;
+            line-height: 1.4;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: pre-wrap;
+            text-align: center;
+        }
+
+        .client-header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ffcc00; /* Yellow Logo */
+            letter-spacing: -1.5px;
+            text-transform: none;
+            text-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            white-space: nowrap;
+        }
+
+        .client-header-logo span {
+            color: #fff;
+        }
+
+        .client-clock {
+            font-family: 'Courier New', monospace;
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        /* Marker for the reading line */
+        .reading-marker {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            box-shadow: 0 0 20px var(--accent-color);
+            z-index: 100;
+            opacity: 0.8;
+            pointer-events: none;
+            transform: translateY(-50%);
+        }
+
+        /* Override style.css word highlights for client view */
+        .word-span {
+            display: inline-block;
+            transition: all 0.3s ease;
+            margin: 0 0.2em;
+        }
+
+        .highlight {
+            color: #fff !important;
+            background: #007aff !important;
+            box-shadow: 0 0 40px rgba(0, 122, 255, 0.8), 0 0 10px #fff;
+            border-radius: 8px;
+            padding: 0 10px;
+            transform: scale(1.1) !important;
+            z-index: 50;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .read {
+            opacity: 0.3;
+        }
+
+        /* Client Frame Elements */
+        .client-content-frame {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            background: var(--bg-color);
+        }
+
+        .live-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ff3b30;
+            box-shadow: 0 0 15px #ff3b30;
+            animation: pulse-live 1.2s infinite;
+        }
+
+        @keyframes pulse-live {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .client-main-viewport {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .client-sponsor-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 80px;
+            background: #001a33; /* Dark Blue Background */
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            z-index: 10000;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+            border-top: 3px solid #004d99; /* Blue top border */
+        }
+
+        .sponsor-label {
+            background: rgba(0,0,0,0.4); 
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.9rem;
+            padding: 0 2rem;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            z-index: 10;
+            box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .sponsor-ticker {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        .sponsor-track {
+            display: inline-flex;
+            animation: sponsor-scroll 35s linear infinite;
+        }
+
+        .sponsor-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 0 5rem;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.5rem; /* Larger text */
+            letter-spacing: 1px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        @keyframes sponsor-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Update PDF Area for Frame */
+        .client-slide-area.full-view {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 50 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 20px 0 !important;
+            background: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Header Banner (Full Width, Dark Blue) -->
+    <div class="client-header-banner">
+        <div class="client-header-logo">
+            <div class="live-dot"></div>
+            Syri<span>AI</span> STUDIO
+        </div>
+        <div style="display: flex; align-items: center; gap: 2rem;">
+            <div class="client-clock" id="client-time-top">00:00:00</div>
+            <div id="connection-indicator"
+                style="width: 14px; height: 14px; border-radius: 50%; background: var(--success-color); box-shadow: 0 0 15px var(--success-color);">
+            </div>
+        </div>
+    </div>
+
+    <div class="client-split-container">
+        <div class="camera-half">
+            <video id="client-video" autoplay playsinline></video>
+            <!-- Secondary small clock on video -->
+            <div class="client-clock" id="client-time"
+                style="position: absolute; bottom: 1rem; left: 1rem; background: rgba(0,0,0,0.5); padding: 0.5rem 1rem; border-radius: 12px; font-size: 1rem;">
+                00:00:00</div>
+        </div>
+        <div class="text-half">
+            <div class="client-content-frame">
+                <!-- Main Content Area (Script or PDF) -->
+                <div class="client-main-viewport">
+                    <div id="reading-marker" class="reading-marker"></div>
+                    <div class="client-scroll-container" id="client-scroll-box">
+                        <div id="client-script-display">Pret skriptin nga Admin...</div>
+                    </div>
+                    
+                    <!-- Client Visual Slide Panel (PDF/Images) -->
+                    <div id="client-slide-area" class="client-slide-area" style="display: none;">
+                        <canvas id="client-slide-canvas"></canvas>
+                    </div>
+
+                    <!-- Drawing Glass Overlays -->
+                    <canvas id="drawglass"
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 5000;"></canvas>
+                    <canvas id="hand-cursor"
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 5100;"></canvas>
+
+                    <div id="hand-status"
+                        style="position: absolute; bottom: 1.5rem; right: 1.5rem; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.8rem; z-index: 300; color: #fff; border: 1px solid var(--glass-border); display: none;">
+                        Hand Active</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sponsor Banner (Full Width, Dark Blue) -->
+    <div class="client-sponsor-banner">
+        <div class="client-header-logo" style="padding: 0 2rem; border-right: 2px solid rgba(255,255,255,0.1); height: 100%;">
+            <div class="live-dot"></div>
+            Syri<span>AI</span>
+        </div>
+        <div class="sponsor-label">SPONSORËT TANË</div>
+        <div class="sponsor-ticker">
+            <div class="sponsor-track" id="sponsor-track">
+                <div class="sponsor-item"><span>KOMPANIA A</span></div>
+                <div class="sponsor-item"><span>DIGITAL TECH</span></div>
+                <div class="sponsor-item"><span>FUTURE MEDIA</span></div>
+                <div class="sponsor-item"><span>INNOVATE AL</span></div>
+                <div class="sponsor-item"><span>SYRI CLOUD</span></div>
+                <!-- Duplicate for seamless scroll -->
+                <div class="sponsor-item"><span>KOMPANIA A</span></div>
+                <div class="sponsor-item"><span>DIGITAL TECH</span></div>
+                <div class="sponsor-item"><span>FUTURE MEDIA</span></div>
+                <div class="sponsor-item"><span>INNOVATE AL</span></div>
+                <div class="sponsor-item"><span>SYRI CLOUD</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOWER THIRDS OVERLAY -->
+    <div id="lower-third" class="lower-third-banner" style="display: none;">
+        <div class="lt-gradient"></div>
+        <div class="lt-content">
+            <div class="lt-name" id="lt-name-display">EMRI JUAJ</div>
+            <div class="lt-title" id="lt-title-display">Gazetar / Prezantues</div>
+        </div>
+        <div class="lt-logo">Syri<span>AI</span></div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+
+</html>

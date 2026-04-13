@@ -1,0 +1,33 @@
+# .NET Core
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/
+.vite/
+dist/
+
+# Env & Logs
+*.log
+.env
+.env.*
+
+# Firebase
+.firebase/
+firebase-debug.log
