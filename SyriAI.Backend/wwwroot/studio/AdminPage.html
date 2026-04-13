@@ -70,7 +70,9 @@
             </div>
             <!-- Visual Slide Overlay -->
             <div id="slide-overlay" class="slide-overlay" style="display: none;">
-                <canvas id="slide-canvas"></canvas>
+                <canvas id="slide-canvas" style="display: none;"></canvas>
+                <img id="slide-img" style="display: none; width: 100%; height: auto; border-radius: 12px;">
+                <video id="slide-video" controls style="display: none; width: 100%; height: auto; border-radius: 12px;"></video>
                 <div class="slide-controls">
                     <button id="prev-slide" class="slide-mini-btn">←</button>
                     <span id="slide-num" class="slide-num">Sllajdi 1 / 1</span>
@@ -125,8 +127,8 @@
                         <button id="view-doc-btn" class="view-mode-btn" style="flex:1;">📽️ Slide</button>
                     </div>
                     <div class="upload-wrapper" style="margin-top: 0.5rem;">
-                        <input type="file" id="file-upload" accept=".pdf,.docx,.pptx" style="display:none;">
-                        <button id="upload-trigger" class="secondary" style="width: 100%;">📤 Upload PDF/PPTX</button>
+                        <input type="file" id="file-upload" accept=".pdf,.docx,.pptx,image/*,video/*" style="display:none;">
+                        <button id="upload-trigger" class="secondary" style="width: 100%;">📤 Upload Media (All)</button>
                     </div>
                 </div>
 

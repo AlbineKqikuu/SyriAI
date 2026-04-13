@@ -218,10 +218,31 @@ syncChannel.onmessage = (event) => {
             break;
 
         case 'slide_update':
+            const clientSlideCanvas = document.getElementById('client-slide-canvas');
+            const clientSlideImg = document.getElementById('client-slide-img');
+            const clientSlideVideo = document.getElementById('client-slide-video');
+
             if (data.show) {
                 slideArea.style.display = 'block';
                 if (data.fullView) slideArea.classList.add('full-view');
                 else slideArea.classList.remove('full-view');
+
+                if (data.type === 'image') {
+                    clientSlideCanvas.style.display = 'none';
+                    clientSlideVideo.style.display = 'none';
+                    clientSlideImg.style.display = 'block';
+                    clientSlideImg.src = data.image;
+                } else if (data.type === 'video') {
+                    clientSlideCanvas.style.display = 'none';
+                    clientSlideImg.style.display = 'none';
+                    clientSlideVideo.style.display = 'block';
+                    clientSlideVideo.src = data.video;
+                } else {
+                    // Default to canvas (PDF behavior)
+                    clientSlideImg.style.display = 'none';
+                    clientSlideVideo.style.display = 'none';
+                    clientSlideCanvas.style.display = 'block';
+                }
             } else {
                 slideArea.style.display = 'none';
                 slideArea.classList.remove('full-view');

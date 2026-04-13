@@ -58,6 +58,8 @@ const openClientBtn = document.getElementById('open-client-btn');
 const slideOverlay = document.getElementById('slide-overlay');
 const slideCanvas = document.getElementById('slide-canvas');
 const slideCtx = slideCanvas.getContext('2d');
+const slideImg = document.getElementById('slide-img');
+const slideVideo = document.getElementById('slide-video');
 const slideNumDisplay = document.getElementById('slide-num');
 const prevSlideBtn = document.getElementById('prev-slide');
 const nextSlideBtn = document.getElementById('next-slide');
@@ -206,26 +208,28 @@ scriptInput.addEventListener('input', () => {
 });
 
 function renderScript(wordList) {
-    const fragment = document.createDocumentFragment();
     const count = wordList.length;
-    
-    // Performance optimization: Using DocumentFragment and efficient string building
-    let html = "";
+    if (count > 20000) {
+        alert("Dokumenti është shumë i gjatë! Për performancë më të mirë, rekomandohet ta ndani në pjesë më të vogla.");
+    }
+
+    // Performance optimization: Using Array and join is much faster than string concatenation
+    const htmlArr = new Array(count);
     for (let i = 0; i < count; i++) {
         const word = wordList[i];
         let className = "word-span";
         if (/\d/.test(word)) {
             if (/\d{1,2}[\/\.-]\d{1,2}/.test(word)) className += " hl-date";
             else className += " hl-number";
-        } else if (i > 0 && /^[A-ZÇË]/.test(word)) {
+        } else if (i > 0 && word.length > 3 && /^[A-ZÇË]/.test(word)) {
             className += " hl-name";
         }
 
-        html += `<span id="word-${i}" class="${className}">${word} </span>`;
+        htmlArr[i] = `<span id="word-${i}" class="${className}">${word} </span>`;
     }
     
-    scriptDisplay.innerHTML = html;
-    broadcastUpdate('script_update', { words: wordList, html: html });
+    scriptDisplay.innerHTML = htmlArr.join('');
+    broadcastUpdate('script_update', { words: wordList, html: scriptDisplay.innerHTML });
 }
 
 recognition.onresult = (event) => {
@@ -927,11 +931,12 @@ fileUpload.addEventListener('change', async (e) => {
                 });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
-                // Reset PDF word positions
                 allWordPositions = [];
                 pageWordBoundaries = [0];
 
-                for (let i = 1; i <= pdf.numPages; i++) {
+                const totalPages = pdf.numPages;
+                for (let i = 1; i <= totalPages; i++) {
+                    uploadTrigger.innerText = `⏳ Faqja ${i}/${totalPages}...`;
                     const page = await pdf.getPage(i);
                     const viewport = page.getViewport({ scale: 2.0 });
                     const textContent = await page.getTextContent();
@@ -1021,12 +1026,45 @@ fileUpload.addEventListener('change', async (e) => {
         };
         reader.readAsArrayBuffer(file);
     } else if (file.type.startsWith("image/")) {
-        // Very basic "mock" image extract - images normally need OCR like Tesseract.js
-        // For now, prompt the user.
-        alert("Për foto rekomandojmë formatin PDF ose Word. OCR do të vijë së shpejti.");
-        uploadTrigger.innerText = "📤 Ngarko File";
+        reader.onload = function () {
+            const dataUrl = this.result;
+            slideOverlay.style.display = 'block';
+            slideCanvas.style.display = 'none';
+            slideVideo.style.display = 'none';
+            slideImg.style.display = 'block';
+            slideImg.src = dataUrl;
+            uploadTrigger.innerText = "✅ Foto u ngarkua";
+            
+            broadcastUpdate('slide_update', { 
+                image: dataUrl, 
+                show: true, 
+                type: 'image' 
+            });
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type.startsWith("video/")) {
+        reader.onload = function () {
+            const dataUrl = this.result;
+            slideOverlay.style.display = 'block';
+            slideCanvas.style.display = 'none';
+            slideImg.style.display = 'none';
+            slideVideo.style.display = 'block';
+            slideVideo.src = dataUrl;
+            uploadTrigger.innerText = "✅ Video u ngarkua";
+            
+            broadcastUpdate('slide_update', { 
+                video: dataUrl, 
+                show: true, 
+                type: 'video' 
+            });
+        };
+        reader.readAsDataURL(file);
+    } else if (file.name.endsWith(".pptx")) {
+        // Basic PPTX Handing - Inform user and prepare for next iteration
+        alert("Për PPTX rekomandojmë momentalisht konvertimin në PDF për performancë maksimale. Suporti direkt po vjen.");
+        uploadTrigger.innerText = "📤 Provoni PDF";
     } else {
-        alert("Format i pambështetur. Te lutem përdor PDF ose Word.");
+        alert("Format i pambështetur. Te lutem përdor PDF, Word, Foto ose Video.");
         uploadTrigger.innerText = "📤 Ngarko File";
     }
 });
