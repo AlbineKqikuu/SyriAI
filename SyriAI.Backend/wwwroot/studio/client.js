@@ -115,6 +115,7 @@ function onHandResults(results) {
         // 1. CLEAR: Palm Open
         if (isPalmOpen) {
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
+            inkReceiver.handle('clear_draw', true);
             studioSync.send('clear_draw', true);
             lastFingerX = null;
             lastFingerY = null;
@@ -229,48 +230,10 @@ function applySettings(settings) {
     }
 }
 
-function drawSegment({ x1, y1, x2, y2, color }) {
-    drawCtx.beginPath();
-    drawCtx.moveTo(x1 * drawGlass.width, y1 * drawGlass.height);
-    drawCtx.lineTo(x2 * drawGlass.width, y2 * drawGlass.height);
-    drawCtx.strokeStyle = color;
-    drawCtx.lineWidth = 6;
-    drawCtx.lineCap = 'round';
-    drawCtx.lineJoin = 'round';
-    drawCtx.shadowBlur = 10;
-    drawCtx.shadowColor = 'rgba(255, 59, 48, 0.6)';
-    drawCtx.stroke();
-}
-
 function drawAdminCursor({ nx, ny, visible, spot }) {
     cursorCtx.clearRect(0, 0, cursorGlass.width, cursorGlass.height);
-    if (!visible) return;
-    if (spot) {
-        // Spotlight from the studio: darken everything except a circle around the finger
-        const w = cursorGlass.width;
-        const h = cursorGlass.height;
-        const cx = nx * w;
-        const cy = ny * h;
-        const radius = spot * w;
-        cursorCtx.save();
-        cursorCtx.fillStyle = 'rgba(2, 4, 12, 0.78)';
-        cursorCtx.fillRect(0, 0, w, h);
-        cursorCtx.globalCompositeOperation = 'destination-out';
-        const g = cursorCtx.createRadialGradient(cx, cy, radius * 0.75, cx, cy, radius);
-        g.addColorStop(0, 'rgba(0,0,0,1)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        cursorCtx.fillStyle = g;
-        cursorCtx.beginPath();
-        cursorCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-        cursorCtx.fill();
-        cursorCtx.restore();
-        cursorCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-        cursorCtx.lineWidth = 1.5;
-        cursorCtx.beginPath();
-        cursorCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-        cursorCtx.stroke();
-        return;
-    }
+    // The studio's spotlight is drawn by inkReceiver
+    if (!visible || spot) return;
     cursorCtx.beginPath();
     cursorCtx.arc(nx * cursorGlass.width, ny * cursorGlass.height, 12, 0, Math.PI * 2);
     cursorCtx.fillStyle = "rgba(255, 59, 48, 0.7)";
@@ -285,8 +248,12 @@ function applyRemoteScroll(container, top) {
     setTimeout(() => isSyncingScroll = false, 50);
 }
 
+// The studio's writing, spotlight, sparkles and reactions, drawn exactly as in the studio
+const inkReceiver = new StudioInkReceiver(drawGlass.parentElement);
+
 // --- Messages from the admin studio ---
 studioSync.on((type, data) => {
+    inkReceiver.handle(type, data);
     switch (type) {
         case 'autoscroll_sync':
             if (data && !isAutoScrolling) {
@@ -304,9 +271,6 @@ studioSync.on((type, data) => {
             break;
         case 'clear_draw':
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
-            break;
-        case 'draw_segment':
-            drawSegment(data);
             break;
         case 'script_update':
             scriptDisplay.innerHTML = data.html;

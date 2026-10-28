@@ -190,8 +190,12 @@ async function showMedia(media) {
     }
 }
 
+// The studio's writing, spotlight, sparkles and reactions over the document box
+const inkReceiver = new StudioInkReceiver(mediaBox);
+
 // ---------- Messages from the studio ----------
 studioSync.on((type, data) => {
+    inkReceiver.handle(type, data);
     switch (type) {
         case 'live_state':
             setLive(data);

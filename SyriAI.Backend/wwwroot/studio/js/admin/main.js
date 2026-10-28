@@ -31,6 +31,7 @@ function applyRemoteScroll(container, top) {
 /** Send the complete current studio state to a client screen that just connected */
 function sendFullState() {
     broadcastUpdate('live_state', liveStatePayload());
+    AdminInk.syncScreens(); // the drawing so far
     broadcastUpdate('headline_sync', headlineState());
     broadcastUpdate('settings_sync', StudioSettings.clientSettings());
     broadcastMedia();

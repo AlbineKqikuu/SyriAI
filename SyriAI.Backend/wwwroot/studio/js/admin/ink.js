@@ -2,7 +2,9 @@
 // floating toolbar. The hand (camera.js) and the mouse both draw through AdminInk.
 //
 // Strokes are kept (normalised 0..1 to the drawing canvas) so the drawing survives a
-// resize and can be undone. Client screens receive plain coloured segments (draw_segment).
+// resize and can be undone. Every stroke is also sent to the presenter screen and the
+// YouTube output (ink_begin / ink_point / ink_end / ink_sync), which draw it with the same
+// StudioInkRender code, so they show exactly what the studio shows.
 
 const AdminInk = (() => {
     const COLORS = ['#ff3b30', '#22d3ee', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#ffffff', '#111827'];
@@ -28,75 +30,10 @@ const AdminInk = (() => {
     let smooth = null;       // smoothed hand position
     let animating = false;
 
-    // ---------- Rendering ----------
-    function tracePath(ctx, pts) {
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        if (pts.length === 1) {
-            ctx.lineTo(pts[0][0] + 0.01, pts[0][1]);
-            return;
-        }
-        for (let i = 1; i < pts.length - 1; i++) {
-            ctx.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
-        }
-        const last = pts[pts.length - 1];
-        ctx.lineTo(last[0], last[1]);
-    }
-
-    function drawStroke(ctx, stroke, w, h, alpha = 1) {
-        const pts = stroke.pts.map(p => [p.x * w, p.y * h]);
-        const lw = Math.max(1.5, stroke.size * w);
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = alpha;
-        switch (stroke.tool) {
-            case 'eraser':
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = lw * 4;
-                tracePath(ctx, pts);
-                ctx.stroke();
-                break;
-            case 'highlighter':
-                ctx.globalAlpha = alpha * 0.35;
-                ctx.strokeStyle = stroke.color;
-                ctx.lineWidth = lw * 4;
-                tracePath(ctx, pts);
-                ctx.stroke();
-                break;
-            case 'rainbow':
-                ctx.lineWidth = lw * 1.3;
-                for (let i = 1; i < pts.length; i++) {
-                    ctx.strokeStyle = `hsl(${(stroke.hue + i * 4) % 360} 95% 60%)`;
-                    ctx.beginPath();
-                    ctx.moveTo(pts[i - 1][0], pts[i - 1][1]);
-                    ctx.lineTo(pts[i][0], pts[i][1]);
-                    ctx.stroke();
-                }
-                break;
-            case 'neon':
-            case 'laser':
-            case 'sparkle':
-                // Coloured glow with a bright core
-                tracePath(ctx, pts);
-                ctx.shadowColor = stroke.color;
-                ctx.shadowBlur = lw * 3;
-                ctx.strokeStyle = stroke.color;
-                ctx.lineWidth = lw;
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.lineWidth = Math.max(1, lw * 0.35);
-                ctx.stroke();
-                break;
-            default:
-                ctx.strokeStyle = stroke.color;
-                ctx.lineWidth = lw;
-                tracePath(ctx, pts);
-                ctx.stroke();
-        }
-        ctx.restore();
-    }
+    // ---------- Rendering (js/shared/ink-render.js) ----------
+    const drawStroke = StudioInkRender.drawStroke;
+    let nextStrokeId = 1;
+    const strokeIdPrefix = Math.random().toString(36).slice(2, 7);
 
     function redraw() {
         const w = adminDrawGlass.width;
@@ -125,11 +62,8 @@ const AdminInk = (() => {
     }
 
     // ---------- Strokes ----------
-    /** Client screens draw plain segments; lasers and the eraser stay local */
-    function sendSegment(stroke, a, b) {
-        if (stroke.tool === 'laser' || stroke.tool === 'eraser') return;
-        broadcastUpdate('draw_segment', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, color: stroke.color });
-    }
+    /** Stroke data the other screens need to draw it the same way */
+    const strokeShape = (s) => ({ tool: s.tool, color: s.color, size: s.size, hue: s.hue, pts: s.pts });
 
     function begin(nx, ny, source) {
         if (active || state.tool === 'spotlight') return;
@@ -140,8 +74,10 @@ const AdminInk = (() => {
             hue: Math.random() * 360,
             pts: [{ x: nx, y: ny }],
         };
+        stroke.id = `${strokeIdPrefix}-${nextStrokeId++}`;
         active = stroke;
         activeSource = source;
+        broadcastUpdate('ink_begin', { id: stroke.id, tool: stroke.tool, color: stroke.color, size: stroke.size, hue: stroke.hue, x: nx, y: ny });
         smooth = { x: nx, y: ny };
         if (stroke.tool === 'laser') {
             lasers.push(stroke);
@@ -167,7 +103,7 @@ const AdminInk = (() => {
         if (Math.hypot((nx - last.x) * adminDrawGlass.width, (ny - last.y) * adminDrawGlass.height) < 1.5) return;
         const point = { x: nx, y: ny };
         active.pts.push(point);
-        sendSegment(active, last, point);
+        broadcastUpdate('ink_point', { id: active.id, x: nx, y: ny });
         if (active.tool === 'sparkle') emitSparkles(nx, ny, active.color);
         redraw();
     }
@@ -198,28 +134,8 @@ const AdminInk = (() => {
     }
 
     function emitSparkles(nx, ny, color) {
-        for (let i = 0; i < 3; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 20 + Math.random() * 90;
-            particles.push({
-                x: nx * fxCanvas.width, y: ny * fxCanvas.height,
-                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-                life: 0, max: 0.5 + Math.random() * 0.6, size: 2 + Math.random() * 4,
-                color: Math.random() < 0.5 ? '#fff7c2' : color,
-            });
-        }
+        StudioInkRender.emitSparkles(particles, nx * fxCanvas.width, ny * fxCanvas.height, color);
         startFx();
-    }
-
-    function drawStar(ctx, x, y, r) {
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            const rad = i % 2 ? r * 0.35 : r;
-            const a = (i * Math.PI) / 4;
-            ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
-        }
-        ctx.closePath();
-        ctx.fill();
     }
 
     function startFx() {
@@ -242,46 +158,10 @@ const AdminInk = (() => {
 
         // Spotlight: darken everything except a circle around the finger
         const spotOn = state.tool === 'spotlight' && spot.visible;
-        if (spotOn) {
-            const x = spot.nx * w;
-            const y = spot.ny * h;
-            const radius = spotRadius();
-            fxCtx.save();
-            fxCtx.fillStyle = 'rgba(2, 4, 12, 0.78)';
-            fxCtx.fillRect(0, 0, w, h);
-            fxCtx.globalCompositeOperation = 'destination-out';
-            const g = fxCtx.createRadialGradient(x, y, radius * 0.75, x, y, radius);
-            g.addColorStop(0, 'rgba(0,0,0,1)');
-            g.addColorStop(1, 'rgba(0,0,0,0)');
-            fxCtx.fillStyle = g;
-            fxCtx.beginPath();
-            fxCtx.arc(x, y, radius, 0, Math.PI * 2);
-            fxCtx.fill();
-            fxCtx.restore();
-            fxCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-            fxCtx.lineWidth = 1.5;
-            fxCtx.beginPath();
-            fxCtx.arc(x, y, radius, 0, Math.PI * 2);
-            fxCtx.stroke();
-        }
+        if (spotOn) StudioInkRender.drawSpotlight(fxCtx, spot.nx * w, spot.ny * h, spotRadius(), w, h);
 
         // Sparkles fly off the line and fade
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.life += dt;
-            if (p.life >= p.max) { particles.splice(i, 1); continue; }
-            p.vy += 40 * dt;
-            p.vx *= 0.985;
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            fxCtx.globalAlpha = 1 - p.life / p.max;
-            fxCtx.fillStyle = p.color;
-            fxCtx.shadowColor = p.color;
-            fxCtx.shadowBlur = 8;
-            drawStar(fxCtx, p.x, p.y, p.size);
-        }
-        fxCtx.globalAlpha = 1;
-        fxCtx.shadowBlur = 0;
+        StudioInkRender.stepParticles(fxCtx, particles, dt);
 
         if (spotOn || particles.length) requestAnimationFrame(fxFrame);
         else fxRunning = false;
@@ -315,16 +195,14 @@ const AdminInk = (() => {
             active.endedAt = performance.now();
             animate();
         }
+        broadcastUpdate('ink_end', { id: active.id });
         active = null;
         activeSource = null;
     }
 
-    /** Send the whole drawing again (after undo, the client cannot remove single lines) */
+    /** Send the whole drawing again (after undo, or when a screen connects) */
     function resyncClient() {
-        broadcastUpdate('clear_draw', true);
-        strokes.forEach(s => {
-            for (let i = 1; i < s.pts.length; i++) sendSegment(s, s.pts[i - 1], s.pts[i]);
-        });
+        broadcastUpdate('ink_sync', { strokes: strokes.map(strokeShape) });
     }
 
     function undo() {
@@ -499,6 +377,8 @@ const AdminInk = (() => {
 
     return {
         begin, extend, end, undo, clear, redraw, show, addRemoteSegment, pointAt, hidePointer,
+        /** Send the current drawing to a screen that just connected */
+        syncScreens: resyncClient,
         get color() { return state.tool === 'laser' ? LASER_COLOR : state.tool === 'eraser' ? '#ffffff' : state.color; },
         get drawing() { return !!active; },
         /** Spotlight tool: the finger lights up a circle and does not write */

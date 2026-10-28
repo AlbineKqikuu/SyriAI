@@ -171,18 +171,8 @@ const reactionsLayer = document.getElementById('admin-reactions');
 let lastReaction = 0;
 
 function showReaction(emoji) {
-    for (let i = 0; i < 7; i++) {
-        const el = document.createElement('span');
-        el.className = 'fx-float';
-        el.textContent = emoji;
-        el.style.left = `${10 + Math.random() * 80}%`;
-        el.style.animationDelay = `${i * 90}ms`;
-        el.style.fontSize = `${34 + Math.random() * 30}px`;
-        el.style.setProperty('--dx', `${(Math.random() - 0.5) * 160}px`);
-        el.style.setProperty('--rise', `${reactionsLayer.clientHeight * (0.6 + Math.random() * 0.4)}px`);
-        el.addEventListener('animationend', () => el.remove());
-        reactionsLayer.appendChild(el);
-    }
+    StudioInkRender.floatEmojis(reactionsLayer, emoji);
+    broadcastUpdate('reaction', { emoji }); // presenter screen and YouTube output too
 }
 
 /** Change pose only after it is seen on consecutive frames (leaving 'write' needs 3) */
@@ -293,6 +283,8 @@ function onHandResults(results) {
     } else {
         // Short dropouts (motion blur, a finger crossing the face) do not break the line
         if (++handState.lostFrames <= HAND_LOST_FRAMES) return;
+        // Report the lost hand once; repeating it every frame would hide the mouse's spotlight
+        if (!handState.tracking && handState.pose === 'none') return;
         Object.assign(handState, { pose: 'none', candidate: null, tracking: false, palmSince: 0, palmCleared: false });
         AdminInk.end('hand');
         AdminInk.hidePointer('hand');
