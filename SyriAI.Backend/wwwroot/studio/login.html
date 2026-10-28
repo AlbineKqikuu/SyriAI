@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kyçu - SyriAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Same look as the server's account pages -->
+    <link rel="stylesheet" href="../css/auth.css" />
+    <style>
+        [hidden] { display: none !important; }
+    </style>
+    <script src="js/shared/firebase-config.js?v=1"></script>
+</head>
+
+<!-- Login for the online version (GitHub Pages) with Firebase Authentication -->
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <main class="auth-card">
+        <div class="header">
+            <div class="logo"><span class="logo-text">Syri<span>AI</span></span></div>
+            <div id="subtitle" class="subtitle">Qendra e kontrollit të transmetimit</div>
+        </div>
+
+        <div id="message" class="alert" role="status" hidden></div>
+
+        <!-- Sign in -->
+        <form id="login-form" novalidate>
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" placeholder="email@shembull.com" autocomplete="username" required />
+            </div>
+            <div class="form-group">
+                <div class="row-between">
+                    <label for="login-password">Fjalëkalimi</label>
+                    <a href="#forgot" class="small-link" data-view="forgot">Keni harruar fjalëkalimin?</a>
+                </div>
+                <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <div class="checkbox-group">
+                <input id="login-remember" type="checkbox" checked />
+                <label for="login-remember">Më mbaj të kyçur</label>
+            </div>
+            <button type="submit">Hyr në studio</button>
+            <button type="button" id="resend-btn" class="link-button" hidden>Dërgo përsëri email-in e verifikimit</button>
+        </form>
+
+        <!-- Register -->
+        <form id="register-form" novalidate hidden>
+            <div class="form-group">
+                <label for="register-email">Email</label>
+                <input id="register-email" type="email" placeholder="email@shembull.com" autocomplete="username" required />
+            </div>
+            <div class="form-group">
+                <label for="register-password">Fjalëkalimi</label>
+                <input id="register-password" type="password" placeholder="Të paktën 8 karaktere" autocomplete="new-password" required />
+            </div>
+            <div class="form-group">
+                <label for="register-confirm">Konfirmo fjalëkalimin</label>
+                <input id="register-confirm" type="password" placeholder="••••••••" autocomplete="new-password" required />
+            </div>
+            <button type="submit">Krijo llogarinë</button>
+        </form>
+
+        <!-- Forgot password -->
+        <form id="forgot-form" novalidate hidden>
+            <p class="hint">Shkruani email-in tuaj dhe do t'ju dërgojmë një lidhje për të vendosur fjalëkalim të ri.</p>
+            <div class="form-group">
+                <label for="forgot-email">Email</label>
+                <input id="forgot-email" type="email" placeholder="email@shembull.com" autocomplete="username" required />
+            </div>
+            <button type="submit">Dërgo lidhjen</button>
+        </form>
+
+        <div class="footer-links" data-for="login">
+            Nuk keni llogari? <a href="#register" data-view="register">Regjistrohu këtu</a>
+        </div>
+        <div class="footer-links" data-for="register forgot" hidden>
+            Keni llogari? <a href="#login" data-view="login">Kyçu këtu</a>
+        </div>
+    </main>
+
+    <script type="module">
+        const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
+        const $ = (id) => document.getElementById(id);
+        const message = $('message');
+
+        const SUBTITLES = {
+            login: 'Qendra e kontrollit të transmetimit',
+            register: 'Krijoni llogarinë tuaj',
+            forgot: 'Rivendosni fjalëkalimin',
+        };
+
+        // Firebase error codes → Albanian messages
+        const ERRORS = {
+            'auth/invalid-email': 'Email-i nuk është i vlefshëm.',
+            'auth/invalid-credential': 'Email-i ose fjalëkalimi është i gabuar.',
+            'auth/wrong-password': 'Email-i ose fjalëkalimi është i gabuar.',
+            'auth/user-not-found': 'Email-i ose fjalëkalimi është i gabuar.',
+            'auth/email-already-in-use': 'Ky email ka tashmë një llogari. Kyçuni ose rivendosni fjalëkalimin.',
+            'auth/weak-password': 'Fjalëkalimi duhet të ketë të paktën 8 karaktere.',
+            'auth/too-many-requests': 'Shumë tentativa. Provoni përsëri pas pak minutash.',
+            'auth/network-request-failed': 'Nuk ka lidhje me internetin.',
+            'auth/operation-not-allowed': 'Kyçja me email nuk është aktivizuar në Firebase.',
+            'auth/unauthorized-domain': 'Ky domen nuk është i lejuar në Firebase (Authorized domains).',
+        };
+
+        function show(text, type = 'info') {
+            message.textContent = text;
+            message.className = `alert alert-${type}`;
+            message.hidden = false;
+        }
+
+        function setView(view) {
+            ['login', 'register', 'forgot'].forEach(v => { $(`${v}-form`).hidden = v !== view; });
+            document.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(view); });
+            $('subtitle').textContent = SUBTITLES[view];
+            message.hidden = true;
+        }
+
+        document.querySelectorAll('[data-view]').forEach(a => a.addEventListener('click', (e) => {
+            e.preventDefault();
+            setView(a.dataset.view);
+        }));
+
+        // Where to go after login: ?next=AdminPage.html (only pages in this folder)
+        const nextParam = new URLSearchParams(location.search).get('next') || 'AdminPage.html';
+        const next = /^[\w.-]+\.html([?#].*)?$/.test(nextParam) ? nextParam : 'AdminPage.html';
+
+        setView(location.hash === '#register' ? 'register' : location.hash === '#forgot' ? 'forgot' : 'login');
+
+        if (!window.SYRIAI_FIREBASE) {
+            show('Kyçja online nuk është konfiguruar ende (mungon konfigurimi i Firebase).', 'warning');
+            document.querySelectorAll('button').forEach(b => { b.disabled = true; });
+        } else {
+            const [{ initializeApp }, fb] = await Promise.all([import(`${SDK}/firebase-app.js`), import(`${SDK}/firebase-auth.js`)]);
+            const auth = fb.getAuth(initializeApp(window.SYRIAI_FIREBASE));
+            auth.languageCode = 'sq';
+            const errorText = (err) => ERRORS[err.code] || 'Diçka shkoi keq. Provoni përsëri.';
+            let unverifiedUser = null;
+
+            // Already signed in with a verified e-mail: straight to the studio
+            fb.onAuthStateChanged(auth, (user) => {
+                if (user && user.emailVerified) location.replace(next);
+            });
+
+            $('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                $('resend-btn').hidden = true;
+                try {
+                    await fb.setPersistence(auth, $('login-remember').checked ? fb.browserLocalPersistence : fb.browserSessionPersistence);
+                    const { user } = await fb.signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value);
+                    if (!user.emailVerified) {
+                        unverifiedUser = user;
+                        $('resend-btn').hidden = false;
+                        show('Verifikoni email-in tuaj para se të hyni: hapni lidhjen që ju dërguam (shikoni edhe Spam).', 'warning');
+                        await fb.signOut(auth);
+                        return;
+                    }
+                    location.replace(next);
+                } catch (err) {
+                    show(errorText(err), 'warning');
+                }
+            });
+
+            $('resend-btn').addEventListener('click', async () => {
+                if (!unverifiedUser) return;
+                try {
+                    await fb.sendEmailVerification(unverifiedUser);
+                    show('Email-i i verifikimit u dërgua përsëri.', 'success');
+                } catch (err) {
+                    show(errorText(err), 'warning');
+                }
+            });
+
+            $('register-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = $('register-email').value.trim();
+                const password = $('register-password').value;
+                if (password.length < 8) return show(ERRORS['auth/weak-password'], 'warning');
+                if (password !== $('register-confirm').value) return show('Fjalëkalimet nuk përputhen.', 'warning');
+                try {
+                    const { user } = await fb.createUserWithEmailAndPassword(auth, email, password);
+                    await fb.sendEmailVerification(user);
+                    await fb.signOut(auth);
+                    setView('login');
+                    $('login-email').value = email;
+                    show(`Llogaria u krijua. Ju dërguam një email te ${email} — hapni lidhjen për ta verifikuar, pastaj kyçuni.`, 'success');
+                } catch (err) {
+                    show(errorText(err), 'warning');
+                }
+            });
+
+            $('forgot-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                    await fb.sendPasswordResetEmail(auth, $('forgot-email').value.trim());
+                } catch (err) {
+                    if (err.code !== 'auth/user-not-found') return show(errorText(err), 'warning');
+                }
+                // Same answer whether or not the address has an account
+                setView('login');
+                show('Nëse ky email ka llogari, ju dërguam një lidhje për fjalëkalim të ri.', 'success');
+            });
+        }
+
+    </script>
+</body>
+
+</html>
