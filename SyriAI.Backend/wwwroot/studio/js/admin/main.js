@@ -88,6 +88,9 @@ studioSync.on((type, data) => {
 studioSync.onStatus((status, previous) => {
     syncStatusDot.dataset.status = status;
     syncStatusDot.title = StudioSync.statusLabel(status);
+    // Static hosting (e.g. GitHub Pages) has no login, so there is nothing to log out of
+    const logout = document.querySelector('a[href="/logout"]');
+    if (logout) logout.style.display = status === 'local' ? 'none' : '';
     if (status === 'offline') notify("Lidhja me serverin u ndërpre. Ekrani i klientit nuk po sinkronizohet.", 'error', 7000);
     // After a reconnect the client may have missed messages
     if (status === 'online' && previous === 'reconnecting') sendFullState();

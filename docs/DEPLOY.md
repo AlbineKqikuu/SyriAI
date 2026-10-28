@@ -1,10 +1,20 @@
-# Deploying SyriAI Studio (Render + Aiven MySQL)
+# Deploying SyriAI Studio
+
+## Free online version (GitHub Pages)
+
+<https://albinekqikuu.github.io/SyriAI/> serves the repository as static files: `index.html` links
+to the studio, the Board and the presenter screen. Without the backend the studio runs in its
+offline mode: settings, drafts and pending sessions are kept in the browser, and screens sync
+through `BroadcastChannel` in the same browser. Login, the script library on the server and
+sync across devices need the full version below. Every push to `main` updates the site.
+
+## Full version with server (Render + Aiven MySQL)
 
 The app needs a running server and a MySQL database. It runs on [Render](https://render.com) as a
 Docker container built from `SyriAI.Backend/Dockerfile`, with a free MySQL database on
 [Aiven](https://aiven.io). Both have free plans.
 
-## 1. Database (Aiven)
+### 1. Database (Aiven)
 
 1. Create a free **MySQL** service on Aiven.
 2. From its overview page copy host, port, user (`avnadmin`) and password, and build the
@@ -14,7 +24,7 @@ Docker container built from `SyriAI.Backend/Dockerfile`, with a free MySQL datab
    Server=<host>;Port=<port>;Database=defaultdb;User=avnadmin;Password=<password>;SslMode=Required;
    ```
 
-## 2. App (Render)
+### 2. App (Render)
 
 1. On Render choose **New → Blueprint** and pick this repository. Render reads `render.yaml`.
 2. Fill in the values it asks for:
@@ -31,7 +41,7 @@ Tables are created by the EF Core migrations on start-up. The app trusts the pro
 `X-Forwarded-*` headers (HTTPS is terminated by Render), so camera and microphone work over the
 public `https://` link.
 
-## Limits of the free plans
+### Limits of the free plans
 
 - The app sleeps after ~15 minutes without visitors; the next visit takes about a minute.
 - The free web service has no persistent disk: uploaded media and the login-cookie keys

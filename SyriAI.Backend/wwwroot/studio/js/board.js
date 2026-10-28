@@ -1567,6 +1567,11 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Static hosting (e.g. GitHub Pages) has no login page, so there is nothing to log out of
+fetch('/Identity/Account/Login', { method: 'HEAD' })
+    .then(r => { if (!r.ok) document.querySelector('a[href="/logout"]')?.setAttribute('hidden', ''); })
+    .catch(() => document.querySelector('a[href="/logout"]')?.setAttribute('hidden', ''));
+
 // ---------- Start ----------
 applyTool(state.tool);
 applyColor(state.color);

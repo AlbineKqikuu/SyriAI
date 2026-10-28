@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyriAI Studio</title>
+    <meta name="description" content="SyriAI Studio — teleprompter me ndjekje zëri, kamerë me AI dhe shkrim me gisht mbi dokumente.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06070d;
+            --panel: rgba(17, 20, 34, 0.72);
+            --line: rgba(255, 255, 255, 0.1);
+            --text: #eef0fb;
+            --muted: #8b90ad;
+            --grad: linear-gradient(135deg, #8b5cf6, #22d3ee);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font: 500 16px/1.5 Inter, system-ui, sans-serif;
+            display: grid;
+            place-items: center;
+            padding: 32px 16px;
+            overflow-x: hidden;
+        }
+
+        .glow {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background:
+                radial-gradient(40vmax 40vmax at 10% 0%, rgba(109, 40, 217, 0.35), transparent 60%),
+                radial-gradient(40vmax 40vmax at 100% 100%, rgba(8, 145, 178, 0.3), transparent 60%);
+        }
+
+        main { width: min(920px, 100%); text-align: center; }
+
+        .logo { font: 800 clamp(40px, 7vw, 64px)/1 Sora, sans-serif; letter-spacing: -0.03em; margin: 0; }
+        .logo span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+        .lead { color: var(--muted); max-width: 560px; margin: 16px auto 40px; font-size: 18px; }
+
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; text-align: left; }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 24px;
+            border-radius: 20px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            color: inherit;
+            text-decoration: none;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover { transform: translateY(-4px); border-color: rgba(139, 92, 246, 0.6); box-shadow: 0 16px 40px rgba(139, 92, 246, 0.25); }
+        .card--main { background: linear-gradient(160deg, rgba(139, 92, 246, 0.28), rgba(34, 211, 238, 0.14)); border-color: rgba(139, 92, 246, 0.5); }
+        .card .emoji { font-size: 32px; }
+        .card h2 { margin: 0; font: 700 20px/1.2 Sora, sans-serif; }
+        .card p { margin: 0; color: var(--muted); font-size: 14px; flex: 1; }
+        .card .go { font-weight: 700; font-size: 14px; color: #a5f3fc; }
+
+        .note { margin-top: 32px; color: var(--muted); font-size: 13px; }
+        .note a { color: #c4b5fd; }
+    </style>
+</head>
+
+<body>
+    <div class="glow" aria-hidden="true"></div>
+    <main>
+        <h1 class="logo">Syri<span>AI</span> Studio</h1>
+        <p class="lead">Teleprompter që ndjek zërin, kamerë me efekte AI dhe shkrim me gishtin tregues mbi foto, PDF, Word dhe video.</p>
+
+        <div class="cards">
+            <a class="card card--main" href="SyriAI.Backend/wwwroot/studio/AdminPage.html">
+                <span class="emoji">🎬</span>
+                <h2>Studio</h2>
+                <p>Teleprompteri, kamera, ngarkimi i skedarëve dhe shkrimi me gisht ose maus, me prozhektor.</p>
+                <span class="go">Hap studion →</span>
+            </a>
+            <a class="card" href="SyriAI.Backend/wwwroot/studio/board.html">
+                <span class="emoji">✍️</span>
+                <h2>Board</h2>
+                <p>Kamera në njërën anë, skedari në tjetrën — shkruaj mbi të me gishtin tregues dhe efekte.</p>
+                <span class="go">Hap Board →</span>
+            </a>
+            <a class="card" href="SyriAI.Backend/wwwroot/studio/client.html">
+                <span class="emoji">🖥️</span>
+                <h2>Ekrani i prezantuesit</h2>
+                <p>Hape në një skedë tjetër të të njëjtit shfletues: ndjek studion në kohë reale.</p>
+                <span class="go">Hap ekranin →</span>
+            </a>
+        </div>
+
+        <p class="note">Përdorni Chrome ose Edge dhe lejoni kamerën dhe mikrofonin. Në këtë version online gjithçka ruhet në shfletuesin tuaj;
+            llogaritë dhe biblioteka në server janë në <a href="https://github.com/AlbineKqikuu/SyriAI">versionin me server</a>.</p>
+    </main>
+</body>
+
+</html>
