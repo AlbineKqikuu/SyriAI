@@ -19,7 +19,7 @@ namespace SyriAI.Backend.DataAccess.Migrations.Studio
                 name: "Media",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false),
                     UserId = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FileName = table.Column<string>(type: "varchar(260)", maxLength: 260, nullable: false)

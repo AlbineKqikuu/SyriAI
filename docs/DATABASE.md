@@ -46,7 +46,12 @@ dotnet run -- import-sqlite app.db
 ```
 
 It copies accounts (with their passwords, confirmations and logins), scripts, sessions, settings and
-the media index. Rows that already exist are skipped, so running it again is harmless. `app.db` is
+the media index. The same works from one MySQL database to another, e.g. from the local database
+into the cloud database:
+
+```bash
+ConnectionStrings__DefaultConnection="<target>" dotnet run -- import-mysql "<source connection string>"
+``` Rows that already exist are skipped, so running it again is harmless. `app.db` is
 only read and can be kept as a backup.
 
 ## Testing

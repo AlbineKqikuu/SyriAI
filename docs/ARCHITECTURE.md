@@ -99,7 +99,7 @@ The backend follows a three-tier architecture. The layers are folders in the one
 flowchart TD
     C["Controllers/ — presentation<br/>ScriptsController · SessionsController · SettingsController · MediaController · StudioHub · Razor pages"]
     B["Business/ — business layer<br/>ScriptService · SessionService (SUS, CSV) · SettingsService · MediaService · AccountCodeService · SmtpEmailSender"]
-    D["DataAccess/ — data access layer<br/>ApplicationDbContext · StudioDbContext · repositories · migrations · SqliteImporter"]
+    D["DataAccess/ — data access layer<br/>ApplicationDbContext · StudioDbContext · repositories · migrations · DatabaseImporter"]
     E["Entities/ — entity layer<br/>Script · StudioSession · UserSettings · MediaAsset · request/response records"]
     DB[("MySQL<br/>database syriai")]
     C --> B --> D --> DB

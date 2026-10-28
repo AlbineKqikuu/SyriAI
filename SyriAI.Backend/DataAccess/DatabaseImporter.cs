@@ -3,19 +3,39 @@ using Microsoft.EntityFrameworkCore;
 namespace SyriAI.Backend.DataAccess;
 
 /// <summary>
-/// One-time copy of the old SQLite database (app.db) into MySQL:
-///   dotnet run -- import-sqlite app.db
-/// Rows that already exist in MySQL (same key, or a user with the same e-mail) are skipped,
-/// so running it twice does no harm. app.db itself is only read.
+/// Copies accounts and studio data from another database into the configured one:
+///   dotnet run -- import-sqlite app.db                       (the old SQLite file)
+///   dotnet run -- import-mysql "Server=...;Database=...;"    (e.g. the local MySQL → the cloud)
+/// Rows that already exist in the target (same key, or a user with the same e-mail) are skipped,
+/// so running it twice does no harm. The source is only read.
 /// </summary>
-public static class SqliteImporter
+public static class DatabaseImporter
 {
-    public static async Task ImportAsync(string sqlitePath, ApplicationDbContext identity, StudioDbContext studio, ILogger logger)
+    public static Task ImportFromSqliteAsync(string sqlitePath, ApplicationDbContext identity, StudioDbContext studio, ILogger logger)
     {
         if (!File.Exists(sqlitePath)) throw new FileNotFoundException($"SQLite file not found: {sqlitePath}");
         var source = $"Data Source={sqlitePath};Mode=ReadOnly";
-        await using var oldIdentity = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(source).Options);
-        await using var oldStudio = new StudioDbContext(new DbContextOptionsBuilder<StudioDbContext>().UseSqlite(source).Options);
+        return ImportAsync(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(source).Options,
+            new DbContextOptionsBuilder<StudioDbContext>().UseSqlite(source).Options,
+            sqlitePath, identity, studio, logger);
+    }
+
+    public static Task ImportFromMySqlAsync(string connectionString, ApplicationDbContext identity, StudioDbContext studio, ILogger logger)
+    {
+        var version = ServerVersion.AutoDetect(connectionString);
+        return ImportAsync(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseMySql(connectionString, version).Options,
+            new DbContextOptionsBuilder<StudioDbContext>().UseMySql(connectionString, version).Options,
+            "MySQL source", identity, studio, logger);
+    }
+
+    private static async Task ImportAsync(
+        DbContextOptions<ApplicationDbContext> identitySource, DbContextOptions<StudioDbContext> studioSource,
+        string sourceName, ApplicationDbContext identity, StudioDbContext studio, ILogger logger)
+    {
+        await using var oldIdentity = new ApplicationDbContext(identitySource);
+        await using var oldStudio = new StudioDbContext(studioSource);
 
         // ---------- Accounts ----------
         var knownEmails = (await identity.Users.Select(u => u.NormalizedEmail).ToListAsync()).ToHashSet();
@@ -57,7 +77,7 @@ public static class SqliteImporter
         await studio.SaveChangesAsync();
 
         logger.LogInformation(
-            "Imported from {Path}: {Users} users, {Roles} roles, {Scripts} scripts, {Sessions} sessions, {Settings} settings, {Media} media files.",
-            sqlitePath, users.Count, roles.Count, scripts.Count, sessions.Count, settings.Count, media.Count);
+            "Imported from {Source}: {Users} users, {Roles} roles, {Scripts} scripts, {Sessions} sessions, {Settings} settings, {Media} media files.",
+            sourceName, users.Count, roles.Count, scripts.Count, sessions.Count, settings.Count, media.Count);
     }
 }

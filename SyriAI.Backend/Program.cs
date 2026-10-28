@@ -134,10 +134,16 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     studioDb.Database.Migrate();
 
-    // One-time copy of the old SQLite data:  dotnet run -- import-sqlite app.db
+    // Copy data from another database (see DataAccess/DatabaseImporter.cs):
+    //   dotnet run -- import-sqlite app.db  |  dotnet run -- import-mysql "<connection string>"
     if (args is ["import-sqlite", var sqlitePath, ..])
     {
-        await SqliteImporter.ImportAsync(sqlitePath, db, studioDb, app.Logger);
+        await DatabaseImporter.ImportFromSqliteAsync(sqlitePath, db, studioDb, app.Logger);
+        return;
+    }
+    if (args is ["import-mysql", var sourceConnection, ..])
+    {
+        await DatabaseImporter.ImportFromMySqlAsync(sourceConnection, db, studioDb, app.Logger);
         return;
     }
 

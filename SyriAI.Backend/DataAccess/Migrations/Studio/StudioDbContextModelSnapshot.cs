@@ -20,6 +20,7 @@ namespace SyriAI.Backend.DataAccess.Migrations.Studio
                 .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            MySqlModelBuilderExtensions.UseGuidCollation(modelBuilder, "");
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("SyriAI.Backend.Entities.MediaAsset", b =>
