@@ -51,8 +51,10 @@ into the cloud database:
 
 ```bash
 ConnectionStrings__DefaultConnection="<target>" dotnet run -- import-mysql "<source connection string>"
-``` Rows that already exist are skipped, so running it again is harmless. `app.db` is
-only read and can be kept as a backup.
+```
+
+Rows that already exist are skipped, so running it again is harmless. The source (e.g. `app.db`)
+is only read and can be kept as a backup.
 
 ## Testing
 
