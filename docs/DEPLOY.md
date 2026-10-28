@@ -8,6 +8,12 @@ offline mode: settings, drafts and pending sessions are kept in the browser, and
 through `BroadcastChannel` in the same browser. Login, the script library on the server and
 sync across devices need the full version below. Every push to `main` updates the site.
 
+Access requires an account: `studio/login.html` uses Firebase Authentication (project
+`syriai-albine-67663`, Email/Password with e-mail verification, password reset).
+`js/shared/auth-guard.js` keeps the studio, Board and presenter screen hidden on `*.github.io`
+until a verified user is signed in; on the .NET server it does nothing, because the server's own
+login protects `/studio`. Users are managed in the Firebase console under Authentication → Users.
+
 ## Full version with server (Render + Aiven MySQL)
 
 The app needs a running server and a MySQL database. It runs on [Render](https://render.com) as a
