@@ -1,0 +1,254 @@
+{
+  "generatedAt": "2026-09-28T14:13:44.654Z",
+  "runs": 30,
+  "scripts": 3,
+  "conditions": [
+    {
+      "name": "clean",
+      "diacritics": 0,
+      "substitute": 0,
+      "drop": 0,
+      "filler": 0
+    },
+    {
+      "name": "diacritics-only",
+      "diacritics": 0.7,
+      "substitute": 0,
+      "drop": 0,
+      "filler": 0
+    },
+    {
+      "name": "light",
+      "diacritics": 0.3,
+      "substitute": 0.05,
+      "drop": 0.03,
+      "filler": 0.02
+    },
+    {
+      "name": "moderate",
+      "diacritics": 0.5,
+      "substitute": 0.12,
+      "drop": 0.07,
+      "filler": 0.05
+    },
+    {
+      "name": "heavy",
+      "diacritics": 0.7,
+      "substitute": 0.2,
+      "drop": 0.12,
+      "filler": 0.08
+    }
+  ],
+  "rows": [
+    {
+      "condition": "clean",
+      "matcher": "legacy",
+      "samples": 90,
+      "coverage": {
+        "mean": 100,
+        "sd": 0
+      },
+      "meanAbsError": {
+        "mean": 0.28343872327612146,
+        "sd": 0.032435332347083526
+      },
+      "within2": {
+        "mean": 100,
+        "sd": 0
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "clean",
+      "matcher": "new",
+      "samples": 90,
+      "coverage": {
+        "mean": 100,
+        "sd": 0
+      },
+      "meanAbsError": {
+        "mean": 0.03577570343604674,
+        "sd": 0.01523066498806984
+      },
+      "within2": {
+        "mean": 100,
+        "sd": 0
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "diacritics-only",
+      "matcher": "legacy",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.55284552845531,
+        "sd": 0.9039524243540271
+      },
+      "meanAbsError": {
+        "mean": 0.7173859948476029,
+        "sd": 0.18528623429573465
+      },
+      "within2": {
+        "mean": 93.00997022315899,
+        "sd": 4.451510729237599
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "diacritics-only",
+      "matcher": "new",
+      "samples": 90,
+      "coverage": {
+        "mean": 100,
+        "sd": 0
+      },
+      "meanAbsError": {
+        "mean": 0.03577570343604674,
+        "sd": 0.01523066498806984
+      },
+      "within2": {
+        "mean": 100,
+        "sd": 0
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "light",
+      "matcher": "legacy",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.72832814747902,
+        "sd": 0.7048644739980353
+      },
+      "meanAbsError": {
+        "mean": 0.5953327311050888,
+        "sd": 0.34116201623056497
+      },
+      "within2": {
+        "mean": 95.99468031717356,
+        "sd": 4.686494190651659
+      },
+      "jumpRate": {
+        "mean": 0.8451269697882163,
+        "sd": 3.638852598540576
+      }
+    },
+    {
+      "condition": "light",
+      "matcher": "new",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.95901502224899,
+        "sd": 0.22195116993740868
+      },
+      "meanAbsError": {
+        "mean": 0.09805781391147247,
+        "sd": 0.05009161068831013
+      },
+      "within2": {
+        "mean": 99.82267723911808,
+        "sd": 0.5387617340972377
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "moderate",
+      "matcher": "legacy",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.49613570209775,
+        "sd": 0.953054510973888
+      },
+      "meanAbsError": {
+        "mean": 0.9780203419318143,
+        "sd": 0.42394325721757936
+      },
+      "within2": {
+        "mean": 89.12258690488137,
+        "sd": 5.970297414643141
+      },
+      "jumpRate": {
+        "mean": 1.0667804208906286,
+        "sd": 4.184102664747544
+      }
+    },
+    {
+      "condition": "moderate",
+      "matcher": "new",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.93174746562282,
+        "sd": 0.28299436084381596
+      },
+      "meanAbsError": {
+        "mean": 0.176481314195858,
+        "sd": 0.0629582410226796
+      },
+      "within2": {
+        "mean": 99.53594968048452,
+        "sd": 0.8933844863988176
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    },
+    {
+      "condition": "heavy",
+      "matcher": "legacy",
+      "samples": 90,
+      "coverage": {
+        "mean": 98.59597176218678,
+        "sd": 1.9404517784825248
+      },
+      "meanAbsError": {
+        "mean": 1.4217872796011914,
+        "sd": 0.537530912221358
+      },
+      "within2": {
+        "mean": 80.71648432533708,
+        "sd": 7.981978001379342
+      },
+      "jumpRate": {
+        "mean": 1.3401251296463579,
+        "sd": 4.2946152389593255
+      }
+    },
+    {
+      "condition": "heavy",
+      "matcher": "new",
+      "samples": 90,
+      "coverage": {
+        "mean": 99.76730569774837,
+        "sd": 0.6100276876734436
+      },
+      "meanAbsError": {
+        "mean": 0.29378533908795873,
+        "sd": 0.11497339588509892
+      },
+      "within2": {
+        "mean": 98.70353641808029,
+        "sd": 1.7018919207264283
+      },
+      "jumpRate": {
+        "mean": 0,
+        "sd": 0
+      }
+    }
+  ]
+}

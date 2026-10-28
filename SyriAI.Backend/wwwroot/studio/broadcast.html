@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyriAI — Dalja për transmetim</title>
+    <!-- style.css provides the shared document styles (PDF, Word, PowerPoint, media) -->
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="broadcast.css?v=5">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/docx-preview/dist/docx-preview.js"></script>
+    <script type="module">
+        import { PptxRenderer } from 'https://cdn.jsdelivr.net/npm/pptx-browser/+esm';
+        window.PptxRenderer = PptxRenderer;
+    </script>
+</head>
+
+<!-- Program output for OBS → YouTube. Everything is laid out on a fixed 1920×1080 stage. -->
+
+<body class="broadcast">
+    <div id="stage" class="stage">
+        <!-- Camera (processed by the studio: blur / virtual studio) -->
+        <canvas id="program-canvas" class="program-canvas" width="1920" height="1080"></canvas>
+
+        <!-- Document / photo / video next to the presenter ("over the shoulder") -->
+        <div id="media-box" class="media-box" hidden>
+            <div id="media-box-content" class="media-box-content"></div>
+        </div>
+
+        <!-- Channel bug -->
+        <div class="bc-bug">
+            <span id="bc-live" class="bc-live" hidden><span class="bc-live-dot"></span>LIVE</span>
+            <span class="bc-brand">Syri<span>AI</span></span>
+            <span class="bc-brand-tag">LAJME</span>
+        </div>
+
+        <!-- Clock -->
+        <div class="bc-clock">
+            <span id="bc-clock-time">00:00</span>
+            <span class="bc-clock-place">PRISHTINË</span>
+        </div>
+
+        <!-- Lower graphics: name strap above the headline strap -->
+        <div class="bc-lower">
+            <div id="bc-name" class="bc-name" hidden>
+                <span id="bc-name-text" class="bc-name-text"></span>
+                <span id="bc-name-title" class="bc-name-title"></span>
+            </div>
+            <div id="bc-headline" class="bc-headline" hidden>
+                <span class="bc-headline-tag">LAJM</span>
+                <span id="bc-headline-text" class="bc-headline-text"></span>
+            </div>
+        </div>
+
+        <!-- Breaking News ticker -->
+        <div class="bc-ticker">
+            <div class="bc-ticker-label">BREAKING NEWS</div>
+            <div class="bc-ticker-content">
+                <div id="bc-ticker-track" class="bc-ticker-track">
+                    <span>SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI</span>
+                    <span>TEKNOLOGJIA AI PO NDRYSHON BROADCASTING</span>
+                    <span>NDRYSHIMET KLIMATIKE: PARASHIKIMI I MOTIT</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Holding slate before LIVE and after the end -->
+        <div id="slate" class="slate">
+            <div class="slate-glow slate-glow--a"></div>
+            <div class="slate-glow slate-glow--b"></div>
+            <div class="slate-content">
+                <div class="slate-brand"><span class="slate-logo">Syri<span>AI</span></span><small>LAJME</small></div>
+                <div id="slate-title" class="slate-title">Transmetimi fillon së shpejti</div>
+                <div id="slate-subtitle" class="slate-subtitle"></div>
+                <div id="slate-countdown" class="slate-countdown" hidden></div>
+            </div>
+        </div>
+
+        <!-- Setup hint (only while no camera source is connected) -->
+        <div id="source-hint" class="source-hint" hidden></div>
+    </div>
+
+    <script src="js/shared/sync.js?v=5"></script>
+    <script src="js/shared/documents.js?v=5"></script>
+    <script src="js/broadcast.js?v=5"></script>
+</body>
+
+</html>

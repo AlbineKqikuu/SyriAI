@@ -1,33 +1,30 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Authentication;
+using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
+using SyriAI.Backend.Business;
 
 namespace SyriAI.Backend.Areas.Identity.Pages.Account
 {
     public class RegisterModel : PageModel
     {
-        private readonly SignInManager<IdentityUser> _signInManager;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IUserStore<IdentityUser> _userStore;
         private readonly IUserEmailStore<IdentityUser> _emailStore;
+        private readonly AccountCodeService _codes;
         private readonly ILogger<RegisterModel> _logger;
 
         public RegisterModel(
             UserManager<IdentityUser> userManager,
             IUserStore<IdentityUser> userStore,
-            SignInManager<IdentityUser> signInManager,
+            AccountCodeService codes,
             ILogger<RegisterModel> logger)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
-            _signInManager = signInManager;
+            _codes = codes;
             _logger = logger;
         }
 
@@ -36,29 +33,26 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
 
         public string ReturnUrl { get; set; }
 
-        public IList<AuthenticationScheme> ExternalLogins { get; set; }
-
         public class InputModel
         {
-            [Required]
-            [EmailAddress]
+            [Required(ErrorMessage = "Shkruani email-in.")]
+            [EmailAddress(ErrorMessage = "Adresa e email-it nuk është e vlefshme.")]
             [Display(Name = "Email")]
             public string Email { get; set; }
 
-            [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 4)]
+            [Required(ErrorMessage = "Shkruani fjalëkalimin.")]
+            [StringLength(100, ErrorMessage = "Fjalëkalimi duhet të ketë {2} deri në {1} karaktere.", MinimumLength = 8)]
             [DataType(DataType.Password)]
-            [Display(Name = "Password")]
+            [Display(Name = "Fjalëkalimi")]
             public string Password { get; set; }
 
             [DataType(DataType.Password)]
-            [Display(Name = "Confirm password")]
-            [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+            [Display(Name = "Konfirmo fjalëkalimin")]
+            [Compare("Password", ErrorMessage = "Fjalëkalimet nuk përputhen.")]
             public string ConfirmPassword { get; set; }
         }
 
-
-        public async Task OnGetAsync(string returnUrl = null)
+        public void OnGet(string returnUrl = null)
         {
             ReturnUrl = returnUrl;
         }
@@ -66,43 +60,36 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return Page();
+
+            var user = new IdentityUser();
+            await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+            await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+            var result = await _userManager.CreateAsync(user, Input.Password);
+
+            if (!result.Succeeded)
             {
-                var user = CreateUser();
-
-                await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-                await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-                var result = await _userManager.CreateAsync(user, Input.Password);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation("User created a new account with password.");
-
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
-                }
                 foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
+                return Page();
             }
 
-            // If we got this far, something failed, redisplay form
-            return Page();
-        }
+            _logger.LogInformation("New account created; waiting for e-mail verification.");
 
-        private IdentityUser CreateUser()
-        {
+            // No sign-in yet: the account is usable only after the e-mail code is entered
             try
             {
-                return Activator.CreateInstance<IdentityUser>();
+                await _codes.SendCodeAsync(user, CodePurpose.ConfirmEmail);
+                TempData["StatusMessage"] = "Llogaria u krijua. Ju dërguam një kod me 6 shifra në email.";
             }
-            catch
+            catch (SmtpException ex)
             {
-                throw new InvalidOperationException($"Can't create an instance of '{nameof(IdentityUser)}'. " +
-                    $"Ensure that '{nameof(IdentityUser)}' is not an abstract class and has a parameterless constructor, or alternatively " +
-                    $"override the register page in /Areas/Identity/Pages/Account/Register.cshtml");
+                _logger.LogError(ex, "Verification e-mail could not be sent.");
+                TempData["WarningMessage"] = "Llogaria u krijua, por email-i nuk u dërgua. Provoni “Dërgo kodin përsëri”.";
             }
+            return RedirectToPage("./VerifyEmail", new { email = Input.Email, returnUrl });
         }
 
         private IUserEmailStore<IdentityUser> GetEmailStore()

@@ -1,11 +1,17 @@
-const syncChannel = new BroadcastChannel('syriai_sync');
+// SyriAI Studio — client screen (what the presenter / audience sees).
+// Receives state from the admin studio through StudioSync and sends back hand drawings,
+// pointer position and keyboard navigation.
+
+const studioSync = new StudioSync();
+
 const scriptDisplay = document.getElementById('client-script-display');
 const scrollBox = document.getElementById('client-scroll-box');
 const video = document.getElementById('client-video');
-const clock = document.getElementById('client-time');
 const slideArea = document.getElementById('client-slide-area');
-const slideCanvas = document.getElementById('client-slide-canvas');
-const slideCtx = slideCanvas.getContext('2d');
+const connectionIndicator = document.getElementById('connection-indicator');
+const countdownOverlay = document.getElementById('countdown-overlay');
+const sponsorTrack = document.getElementById('sponsor-track');
+const newsTickerTrack = document.getElementById('news-ticker-track');
 
 // --- Hand Tracking & Drawing Setup ---
 const drawGlass = document.getElementById('drawglass');
@@ -15,8 +21,7 @@ const handStatusLabel = document.getElementById('hand-status');
 const cursorGlass = document.getElementById('hand-cursor');
 const cursorCtx = cursorGlass.getContext('2d');
 
-// PDF.js Worker Setup
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+const PDF_VIEW_OPTIONS = { scale: 2.0, rootMargin: '800px 0px', placeholderHeight: '1200px', pageWidth: '85%' };
 
 // Handle sizing for drawing canvas
 function resizeDrawCanvas() {
@@ -32,10 +37,12 @@ let isSyncingScroll = false;
 
 let lastFingerY = null;
 let lastFingerX = null;
-let fingerPoints = []; // To draw smooth lines
 let isAutoScrolling = false;
 let scrollSpeed = 10;
 let lastScrollTime = 0;
+let scrollRemainder = 0;
+let lastReadIndex = -1;
+let currentMediaUrl = null;
 
 const hands = new Hands({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
@@ -103,12 +110,12 @@ function onHandResults(results) {
         cursorCtx.restore();
 
         // Broadcast pointing position to Admin
-        syncChannel.postMessage({ type: 'cursor_pos', data: { nx, ny } });
+        studioSync.send('cursor_pos', { nx, ny });
 
         // 1. CLEAR: Palm Open
         if (isPalmOpen) {
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
-            syncChannel.postMessage({ type: 'clear_draw', data: true });
+            studioSync.send('clear_draw', true);
             lastFingerX = null;
             lastFingerY = null;
             return;
@@ -129,9 +136,8 @@ function onHandResults(results) {
                 drawCtx.stroke();
 
                 // Broadcast segment
-                syncChannel.postMessage({
-                    type: 'draw_segment',
-                    data: { x1: lastFingerX / drawGlass.width, y1: lastFingerY / drawGlass.height, x2: nx, y2: ny, color: '#ff3b30' }
+                studioSync.send('draw_segment', {
+                    x1: lastFingerX / drawGlass.width, y1: lastFingerY / drawGlass.height, x2: nx, y2: ny, color: '#ff3b30'
                 });
             }
             lastFingerX = screenX;
@@ -149,7 +155,8 @@ function onHandResults(results) {
     }
 }
 
-// Start camera for hand tracking
+// Start camera for hand tracking. Needs HTTPS on other devices (browsers only allow
+// the camera on localhost or secure origins); the screen still works without it.
 const camera = new Camera(video, {
     onFrame: async () => {
         await hands.send({ image: video });
@@ -157,33 +164,140 @@ const camera = new Camera(video, {
     width: 640,
     height: 480
 });
-camera.start();
+camera.start().catch(err => {
+    console.warn('Client camera unavailable:', err);
+    handStatusLabel.innerText = "Kamera e klientit nuk është e disponueshme — vizatimi me dorë është joaktiv";
+    handStatusLabel.style.display = 'block';
+    setTimeout(() => { handStatusLabel.style.display = 'none'; }, 8000);
+});
 
-// --- Main App Logic ---
-// 1. Clock Logic
+// --- Clock ---
 function updateClock() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('sq-AL');
-    if (clock) clock.innerText = timeStr;
-    const clockTop = document.getElementById('client-time-top');
-    if (clockTop) clockTop.innerText = timeStr;
+    const timeStr = new Date().toLocaleTimeString('sq-AL', { hour12: false });
+    document.getElementById('client-time').innerText = timeStr;
+    document.getElementById('client-time-top').innerText = timeStr;
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// 2. Camera Logic - Handled by MediaPipe Camera Utils above
+// --- Views ---
+function showDocumentArea() {
+    slideArea.style.display = 'block';
+    slideArea.classList.add('full-view');
+    scrollBox.style.display = 'none';
+}
 
-// 2.5 Request initial state
-syncChannel.postMessage({ type: 'client_ready' });
+function showTextArea() {
+    scrollBox.style.display = 'block';
+    slideArea.style.display = 'none';
+}
 
-// 3. Sync Logic
-syncChannel.onmessage = (event) => {
-    const { type, data } = event.data;
+async function showMedia(media) {
+    if (!media || media.url === currentMediaUrl) return;
+    currentMediaUrl = media.url;
+    try {
+        await StudioDocuments.renderMedia(media, slideArea, { pdfOptions: PDF_VIEW_OPTIONS, muteVideo: true });
+    } catch (err) {
+        console.error('Client media error:', err);
+        currentMediaUrl = null;
+        slideArea.innerHTML = `<p class="client-media-error">Dokumenti nuk u hap në këtë ekran.</p>`;
+    }
+}
 
+function applySettings(settings) {
+    document.body.classList.toggle('prompter-light', settings.theme === 'light');
+    document.body.classList.toggle('show-reading-line', !!settings.readingLine);
+    if (settings.fontSize) scriptDisplay.style.fontSize = `${settings.fontSize}rem`;
+    if (Array.isArray(settings.ticker) && settings.ticker.length) {
+        newsTickerTrack.replaceChildren(...settings.ticker.map(line => {
+            const span = document.createElement('span');
+            span.textContent = line;
+            return span;
+        }));
+    }
+    if (Array.isArray(settings.sponsors) && settings.sponsors.length) {
+        // Two copies of the list make the scrolling loop seamless
+        const items = settings.sponsors.map(name => {
+            const item = document.createElement('div');
+            item.className = 'sponsor-item';
+            const span = document.createElement('span');
+            span.textContent = name;
+            item.appendChild(span);
+            return item;
+        });
+        sponsorTrack.replaceChildren(...items, ...items.map(i => i.cloneNode(true)));
+    }
+}
+
+function drawSegment({ x1, y1, x2, y2, color }) {
+    drawCtx.beginPath();
+    drawCtx.moveTo(x1 * drawGlass.width, y1 * drawGlass.height);
+    drawCtx.lineTo(x2 * drawGlass.width, y2 * drawGlass.height);
+    drawCtx.strokeStyle = color;
+    drawCtx.lineWidth = 6;
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+    drawCtx.shadowBlur = 10;
+    drawCtx.shadowColor = 'rgba(255, 59, 48, 0.6)';
+    drawCtx.stroke();
+}
+
+function drawAdminCursor({ nx, ny, visible, spot }) {
+    cursorCtx.clearRect(0, 0, cursorGlass.width, cursorGlass.height);
+    if (!visible) return;
+    if (spot) {
+        // Spotlight from the studio: darken everything except a circle around the finger
+        const w = cursorGlass.width;
+        const h = cursorGlass.height;
+        const cx = nx * w;
+        const cy = ny * h;
+        const radius = spot * w;
+        cursorCtx.save();
+        cursorCtx.fillStyle = 'rgba(2, 4, 12, 0.78)';
+        cursorCtx.fillRect(0, 0, w, h);
+        cursorCtx.globalCompositeOperation = 'destination-out';
+        const g = cursorCtx.createRadialGradient(cx, cy, radius * 0.75, cx, cy, radius);
+        g.addColorStop(0, 'rgba(0,0,0,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        cursorCtx.fillStyle = g;
+        cursorCtx.beginPath();
+        cursorCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+        cursorCtx.fill();
+        cursorCtx.restore();
+        cursorCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        cursorCtx.lineWidth = 1.5;
+        cursorCtx.beginPath();
+        cursorCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+        cursorCtx.stroke();
+        return;
+    }
+    cursorCtx.beginPath();
+    cursorCtx.arc(nx * cursorGlass.width, ny * cursorGlass.height, 12, 0, Math.PI * 2);
+    cursorCtx.fillStyle = "rgba(255, 59, 48, 0.7)";
+    cursorCtx.shadowBlur = 10;
+    cursorCtx.shadowColor = "white";
+    cursorCtx.fill();
+}
+
+function applyRemoteScroll(container, top) {
+    isSyncingScroll = true;
+    container.scrollTop = top;
+    setTimeout(() => isSyncingScroll = false, 50);
+}
+
+// --- Messages from the admin studio ---
+studioSync.on((type, data) => {
     switch (type) {
         case 'autoscroll_sync':
-            isAutoScrolling = data;
-            if (isAutoScrolling) requestAnimationFrame(clientScrollStep);
+            if (data && !isAutoScrolling) {
+                // Reset the frame clock so resuming does not jump by the paused duration
+                lastScrollTime = 0;
+                scrollRemainder = 0;
+                isAutoScrolling = true;
+                requestAnimationFrame(clientScrollStep);
+            } else {
+                isAutoScrolling = !!data;
+            }
             break;
         case 'scroll_speed_sync':
             scrollSpeed = data;
@@ -191,141 +305,79 @@ syncChannel.onmessage = (event) => {
         case 'clear_draw':
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
             break;
-
         case 'draw_segment':
-            const { x1, y1, x2, y2, color } = data;
-            drawCtx.beginPath();
-            drawCtx.moveTo(x1 * drawGlass.width, y1 * drawGlass.height);
-            drawCtx.lineTo(x2 * drawGlass.width, y2 * drawGlass.height);
-            drawCtx.strokeStyle = color;
-            drawCtx.lineWidth = 6;
-            drawCtx.lineCap = 'round';
-            drawCtx.lineJoin = 'round';
-            drawCtx.shadowBlur = 10;
-            drawCtx.shadowColor = 'rgba(255, 59, 48, 0.6)';
-            drawCtx.stroke();
+            drawSegment(data);
             break;
         case 'script_update':
             scriptDisplay.innerHTML = data.html;
+            lastReadIndex = -1;
             break;
-
         case 'highlight_update':
             highlightWord(data);
             break;
-
         case 'font_size':
             scriptDisplay.style.fontSize = `${data}rem`;
             break;
-
-        case 'slide_update':
-            const clientSlideCanvas = document.getElementById('client-slide-canvas');
-            const clientSlideImg = document.getElementById('client-slide-img');
-            const clientSlideVideo = document.getElementById('client-slide-video');
-
-            if (data.show) {
-                slideArea.style.display = 'block';
-                if (data.fullView) slideArea.classList.add('full-view');
-                else slideArea.classList.remove('full-view');
-
-                if (data.type === 'image') {
-                    clientSlideCanvas.style.display = 'none';
-                    clientSlideVideo.style.display = 'none';
-                    clientSlideImg.style.display = 'block';
-                    clientSlideImg.src = data.image;
-                } else if (data.type === 'video') {
-                    clientSlideCanvas.style.display = 'none';
-                    clientSlideImg.style.display = 'none';
-                    clientSlideVideo.style.display = 'block';
-                    clientSlideVideo.src = data.video;
-                } else {
-                    // Default to canvas (PDF behavior)
-                    clientSlideImg.style.display = 'none';
-                    clientSlideVideo.style.display = 'none';
-                    clientSlideCanvas.style.display = 'block';
-                }
-            } else {
-                slideArea.style.display = 'none';
-                slideArea.classList.remove('full-view');
-            }
+        case 'settings_sync':
+            applySettings(data);
             break;
-        case 'pdf_buffer_sync':
-            renderClientPdf(data.buffer);
+        case 'media_sync':
+            showMedia(data);
             break;
-        case 'pdf_page_chunk':
-            // Deprecated - replaced by local rendering for speed
-            break;
-
-        case 'pdf_word_highlight':
-            // High-precision scrolling on client for PDF
+        case 'pdf_word_highlight': {
+            // Keep the spoken word's position centred in the PDF
             const pageEl = document.getElementById(`pdf-page-${data.page}`);
             if (pageEl) {
                 const targetScroll = pageEl.offsetTop + (data.ny * pageEl.clientHeight) - (slideArea.clientHeight / 2);
                 slideArea.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
             }
             break;
-        case 'pdf_clear':
-            slideArea.querySelectorAll('.pdf-page-container').forEach(el => el.remove());
-            slideCanvas.style.display = 'block'; // Restore canvas visibility
-            break;
-        case 'pdf_pages_ready':
-            // Deprecated
-            break;
+        }
         case 'view_mode':
-            if (data === 'doc') {
-                scrollBox.style.display = 'none';
-                slideArea.style.display = 'block';
-                slideArea.classList.add('full-view');
-            } else {
-                scrollBox.style.display = 'block';
-                slideArea.style.display = 'none';
-            }
+            if (data === 'doc') showDocumentArea();
+            else showTextArea();
             break;
         case 'pdf_scroll':
-            isSyncingScroll = true;
-            slideArea.scrollTop = data;
-            setTimeout(() => isSyncingScroll = false, 50);
+            applyRemoteScroll(slideArea, data);
             break;
         case 'text_scroll':
-            isSyncingScroll = true;
-            scrollBox.scrollTop = data;
-            setTimeout(() => isSyncingScroll = false, 50);
+            applyRemoteScroll(scrollBox, data);
             break;
         case 'cursor_pos':
-            const { nx, ny, visible } = data;
-            cursorCtx.clearRect(0, 0, cursorGlass.width, cursorGlass.height);
-            if (visible) {
-                const screenX = nx * cursorGlass.width;
-                const screenY = ny * cursorGlass.height;
-                cursorCtx.beginPath();
-                cursorCtx.arc(screenX, screenY, 12, 0, Math.PI * 2);
-                cursorCtx.fillStyle = "rgba(255, 59, 48, 0.7)";
-                cursorCtx.shadowBlur = 10;
-                cursorCtx.shadowColor = "white";
-                cursorCtx.fill();
-            }
+            drawAdminCursor(data);
             break;
-        case 'lt_sync':
+        case 'countdown':
+            countdownOverlay.hidden = data <= 0;
+            countdownOverlay.querySelector('span').textContent = data;
+            break;
+        case 'lt_sync': {
             const lt = document.getElementById('lower-third');
-            if (lt) {
-                document.getElementById('lt-name-display').innerText = data.name;
-                document.getElementById('lt-title-display').innerText = data.title;
-                lt.style.display = data.show ? 'flex' : 'none';
-            }
+            document.getElementById('lt-name-display').innerText = data.name;
+            document.getElementById('lt-title-display').innerText = data.title;
+            lt.style.display = data.show ? 'flex' : 'none';
             break;
+        }
     }
-};
+});
+
+studioSync.onStatus((status) => {
+    connectionIndicator.dataset.status = status;
+    connectionIndicator.title = StudioSync.statusLabel(status);
+    // Ask the admin for the full state whenever we (re)connect
+    if (status === 'online' || status === 'local') studioSync.send('client_ready');
+});
 
 // Listen for local scroll in client to sync back to Admin
 slideArea.addEventListener('scroll', () => {
     if (isSyncingScroll) return;
     if (slideArea.classList.contains('full-view')) {
-        syncChannel.postMessage({ type: 'pdf_scroll', data: slideArea.scrollTop });
+        studioSync.send('pdf_scroll', slideArea.scrollTop);
     }
 });
 
 scrollBox.addEventListener('scroll', () => {
     if (isSyncingScroll) return;
-    syncChannel.postMessage({ type: 'text_scroll', data: scrollBox.scrollTop });
+    studioSync.send('text_scroll', scrollBox.scrollTop);
 });
 
 // Client Keyboard Control (Arrows & Scrolling)
@@ -338,31 +390,32 @@ window.addEventListener('keydown', (e) => {
 
     if (nextKeys.includes(e.key)) {
         e.preventDefault();
-        syncChannel.postMessage({ type: 'nav_next' });
+        studioSync.send('nav_next');
     } else if (prevKeys.includes(e.key)) {
         e.preventDefault();
-        syncChannel.postMessage({ type: 'nav_prev' });
+        studioSync.send('nav_prev');
     }
 });
 
 function highlightWord(index) {
     const wordEl = document.getElementById(`word-${index}`);
-    if (wordEl) {
-        // No .highlight class added here for client.
+    if (!wordEl) return;
 
-        // Mark words as read (faded) for tracking
-        for (let i = 0; i < index; i++) {
-            const prevEl = document.getElementById(`word-${i}`);
-            if (prevEl) prevEl.classList.add('read');
+    // Mark words as read (faded); only touch the range that changed
+    const lastRead = index - 1;
+    if (lastRead > lastReadIndex) {
+        for (let i = lastReadIndex + 1; i <= lastRead; i++) {
+            document.getElementById(`word-${i}`)?.classList.add('read');
         }
-
-        // Keep Auto-scroll so the screen moves with you
-        wordEl.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
-        });
+    } else {
+        for (let i = lastRead + 1; i <= lastReadIndex; i++) {
+            document.getElementById(`word-${i}`)?.classList.remove('read');
+        }
     }
+    lastReadIndex = lastRead;
+
+    // Keep the current word centred
+    wordEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 }
 
 function clientScrollStep(timestamp) {
@@ -372,55 +425,18 @@ function clientScrollStep(timestamp) {
     lastScrollTime = timestamp;
 
     const scrollAmount = (scrollSpeed / 10) * (deltaTime / 16.67);
-    const isDocMode = slideArea.classList.contains('full-view');
+    const isDocMode = slideArea.classList.contains('full-view') && slideArea.style.display !== 'none';
     const container = isDocMode ? slideArea : scrollBox;
 
-    if (container) {
-        container.scrollTop += scrollAmount;
+    // Accumulate sub-pixel amounts so low speeds still move
+    scrollRemainder += scrollAmount;
+    const whole = Math.trunc(scrollRemainder);
+    if (whole !== 0) {
+        container.scrollTop += whole;
+        scrollRemainder -= whole;
     }
 
     requestAnimationFrame(clientScrollStep);
 }
 
-// Local PDF rendering for INSTANT results
-async function renderClientPdf(buffer) {
-    try {
-        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-        slideArea.innerHTML = ''; // Clear
-        slideArea.style.display = 'block';
-        slideArea.classList.add('full-view');
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 2.0 });
-
-            const container = document.createElement('div');
-            container.className = 'pdf-page-container';
-            container.id = `pdf-page-${i}`;
-            container.style.width = '85%';
-            container.style.margin = '20px auto';
-
-            const canvas = document.createElement('canvas');
-            canvas.className = 'pdf-page-canvas';
-            canvas.style.display = 'block';
-            canvas.style.width = '100%';
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            const highlight = document.createElement('div');
-            highlight.className = 'pdf-highlight';
-            highlight.id = `pdf-hl-${i}`;
-
-            container.appendChild(canvas);
-            container.appendChild(highlight);
-            slideArea.appendChild(container);
-
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-        }
-        // Force sync view mode
-        scrollBox.style.display = 'none';
-    } catch (err) {
-        console.error("Client PDF Load Error:", err);
-    }
-}
+studioSync.start();

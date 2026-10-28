@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyriAI - AI Teleprompter</title>
-    <link rel="stylesheet" href="style.css">
+    <title>SyriAI Studio</title>
+    <link rel="stylesheet" href="style.css?v=11">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <!-- MediaPipe Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -17,141 +17,292 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
         crossorigin="anonymous"></script>
+    <!-- Real-time sync with client screens -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <!-- File Processing Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- docx-preview for high-fidelity Word rendering -->
+    <script src="https://unpkg.com/docx-preview/dist/docx-preview.js"></script>
+    <!-- pptx-browser for high-fidelity PPTX rendering -->
+    <script type="module">
+        import { PptxRenderer } from 'https://cdn.jsdelivr.net/npm/pptx-browser/+esm';
+        window.PptxRenderer = PptxRenderer;
+    </script>
 </head>
 
 <body>
-    <header>
+    <!-- Icon sprite -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" /></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></symbol>
+        <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></symbol>
+        <symbol id="i-mirror" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3" /><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" /><path d="M12 20v2M12 14v2M12 8v2M12 2v2" /></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></symbol>
+        <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></symbol>
+        <symbol id="i-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" /><path d="M22 21H7" /><path d="m5 11 9 9" /></symbol>
+        <symbol id="i-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8" /></symbol>
+        <symbol id="i-slides" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20" /><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" /><path d="m7 21 5-5 5 5" /></symbol>
+        <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></symbol>
+        <symbol id="i-scroll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5" /><path d="m7 13 5 5 5-5" /></symbol>
+        <symbol id="i-blur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3" /><path d="M6 20a6 6 0 0 1 12 0" /><circle cx="12" cy="12" r="10" stroke-dasharray="2 3" /></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></symbol>
+        <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" /></symbol>
+        <symbol id="i-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="13" width="20" height="8" rx="1" /><path d="M6 17h8" /><path d="M5 9h14M8 5h8" /></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18" /><path d="m7 15 4-4 3 3 5-6" /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></symbol>
+        <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></symbol>
+        <symbol id="i-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14" /></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></symbol>
+        <symbol id="i-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18" /><path d="M3 6h10M3 18h10" opacity=".4" /></symbol>
+        <symbol id="i-broadcast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" /><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5" /></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+        <symbol id="i-neon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></symbol>
+        <symbol id="i-marker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" /></symbol>
+        <symbol id="i-rainbow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17a10 10 0 0 0-20 0" /><path d="M6 17a6 6 0 0 1 12 0" /><path d="M10 17a2 2 0 0 1 4 0" /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m12 8 1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2z" /></symbol>
+        <symbol id="i-laser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="8" stroke-dasharray="3 3" /></symbol>
+        <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></symbol>
+        <symbol id="i-mouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 6v4" /></symbol>
+        <symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8" /><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15" /></symbol>
+    </svg>
+
+    <header class="app-header">
         <div class="header-left">
-            <div class="logo">SyriAI</div>
-            <div id="digital-clock" class="digital-clock">00:00:00</div>
+            <div class="logo">Syri<span>AI</span> <small>Studio</small></div>
+            <div id="digital-clock" class="digital-clock" aria-label="Ora">00:00:00</div>
         </div>
         <div class="header-right">
-            <button id="draw-mode-btn" class="icon-btn" title="Vizatimi/Pointer">🖊️</button>
-            <button id="mirror-btn" class="icon-btn" title="Mirror Mode">🪞</button>
-            <a href="/logout" class="icon-btn" title="Logout" style="text-decoration: none;">🚪</a>
-            <div id="connection-status" class="status-badge">Standby</div>
+            <span id="sync-status" class="sync-status" data-status="connecting" title="Duke u lidhur…"></span>
+            <div id="connection-status" class="status-badge" role="status">Në pritje</div>
+            <div class="header-divider"></div>
+            <a href="board.html" class="icon-btn" title="Hap SyriAI Board: skedari i ngarkuar + shkrim me gisht" aria-label="SyriAI Board">
+                <svg class="icon"><use href="#i-slides" /></svg>
+            </a>
+            <button id="history-btn" class="icon-btn" title="Historiku i sesioneve" aria-label="Historiku i sesioneve">
+                <svg class="icon"><use href="#i-chart" /></svg>
+            </button>
+            <button id="settings-btn" class="icon-btn" title="Cilësimet e studios" aria-label="Cilësimet">
+                <svg class="icon"><use href="#i-settings" /></svg>
+            </button>
+            <button id="draw-mode-btn" class="icon-btn" title="Vizatim me dorë (ndiz/fik)" aria-label="Vizatim me dorë">
+                <svg class="icon"><use href="#i-pen" /></svg>
+            </button>
+            <button id="mirror-btn" class="icon-btn" title="Pasqyro tekstin (për teleprompter fizik)" aria-label="Pasqyro tekstin">
+                <svg class="icon"><use href="#i-mirror" /></svg>
+            </button>
+            <a href="/logout" class="icon-btn" title="Dil nga llogaria" aria-label="Dil">
+                <svg class="icon"><use href="#i-logout" /></svg>
+            </a>
         </div>
     </header>
 
     <main class="main-container">
-        <section id="admin-video-segment" class="admin-video-segment">
+        <section id="admin-video-segment" class="admin-video-segment" aria-label="Kamera">
             <canvas id="admin-output-canvas"></canvas>
-            <div id="admin-ai-status" class="admin-overlay-status">Gaze Tracking: Active</div>
-            <div id="admin-mood-feedback" class="admin-overlay-mood">Mood: Neutral</div>
+            <div id="admin-ai-status" class="admin-overlay-status">Shikimi: duke nisur…</div>
+            <div id="admin-mood-feedback" class="admin-overlay-mood">Shprehja: duke kalibruar…</div>
         </section>
 
-        <section class="teleprompter-area">
+        <section class="teleprompter-area" aria-label="Teleprompter">
             <div id="analytics-bar" class="analytics-overlay">
-                <div class="stat"><span class="label">SPEED</span><span id="stat-wpm">0</span> WPM</div>
-                <div class="stat"><span class="label">REMAINING</span><span id="stat-time">00:00</span></div>
-                <div class="stat"><span class="label">ACCURACY</span><span id="stat-acc">0%</span></div>
+                <div class="stat"><span class="label">Shpejtësia</span><span><span id="stat-wpm">0</span> <small>WPM</small></span></div>
+                <div class="stat"><span class="label">Koha e mbetur</span><span id="stat-time">0:00</span></div>
+                <div class="stat"><span class="label">Saktësia</span><span id="stat-acc">0%</span></div>
             </div>
             <div class="scroll-container" id="scroll-container">
-                <div id="script-display">Shkruaj Tekstin.</div>
+                <div id="script-display">Shkruani ose ngarkoni skriptin në panelin djathtas, pastaj shtypni “Fillo LIVE”.</div>
             </div>
             <div class="reading-line"></div>
-            <!-- Admin Drawing Overlay (to see client markings or own drawings) -->
-            <canvas id="admin-drawglass"
-                style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 5000;"></canvas>
-            <!-- Admin Cursor Overlay (to see pointer feedback) -->
-            <canvas id="admin-cursor"
-                style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 5100;"></canvas>
+            <!-- Drawing overlay (own drawings and client markings) -->
+            <canvas id="admin-drawglass" class="overlay-canvas overlay-canvas--draw"></canvas>
+            <!-- Cursor overlay (pointer feedback) -->
+            <canvas id="admin-cursor" class="overlay-canvas overlay-canvas--cursor"></canvas>
             <!-- Full Document View Mode -->
-            <div id="pdf-view-main" class="pdf-viewer-main" style="display: none;">
-                <canvas id="pdf-main-canvas"></canvas>
-                <div class="pdf-nav-overlay">
-                    <button id="main-prev-pdf" class="nav-btn">←</button>
-                    <span id="main-pdf-num">Faqja 1 / 1</span>
-                    <button id="main-next-pdf" class="nav-btn">→</button>
+            <div id="pdf-view-main" class="pdf-viewer-main" style="display: none;"></div>
+            <!-- Writing toolbar: shown when a file is opened or hand writing is turned on (js/admin/ink.js) -->
+            <div id="ink-bar" class="ink-bar" hidden>
+                <div class="ink-group">
+                    <button class="ink-btn ink-btn--label" data-ink="hand" title="Kontroll me gisht: shkrim dhe prozhektor me gishtin tregues (ndiz/fik)" aria-label="Kontroll me gisht" aria-pressed="false"><svg class="icon"><use href="#i-hand" /></svg><span>Gisht</span></button>
+                    <button class="ink-btn ink-btn--label" data-ink="mouse" title="Kontroll me maus: shkrim dhe prozhektor me mausin (ndiz/fik)" aria-label="Kontroll me maus" aria-pressed="false"><svg class="icon"><use href="#i-mouse" /></svg><span>Maus</span></button>
+                </div>
+                <span class="ink-sep"></span>
+                <div class="ink-group">
+                    <button class="ink-btn" data-tool="pen" title="Laps" aria-label="Laps"><svg class="icon"><use href="#i-pen" /></svg></button>
+                    <button class="ink-btn" data-tool="neon" title="Neon" aria-label="Neon"><svg class="icon"><use href="#i-neon" /></svg></button>
+                    <button class="ink-btn" data-tool="highlighter" title="Theksues" aria-label="Theksues"><svg class="icon"><use href="#i-marker" /></svg></button>
+                    <button class="ink-btn" data-tool="rainbow" title="Ylber" aria-label="Ylber"><svg class="icon"><use href="#i-rainbow" /></svg></button>
+                    <button class="ink-btn" data-tool="sparkle" title="Shkëndija" aria-label="Shkëndija"><svg class="icon"><use href="#i-sparkle" /></svg></button>
+                    <button class="ink-btn" data-tool="laser" title="Lazer (zhduket)" aria-label="Lazer (zhduket)"><svg class="icon"><use href="#i-laser" /></svg></button>
+                    <button class="ink-btn ink-btn--light" data-tool="spotlight" title="Prozhektor: ekrani errësohet, ndriçohet vetëm rrethi te gishti" aria-label="Prozhektor"><svg class="icon"><use href="#i-sun" /></svg><span>Prozhektor</span></button>
+                    <button class="ink-btn" data-tool="eraser" title="Gomë" aria-label="Gomë"><svg class="icon"><use href="#i-eraser" /></svg></button>
+                </div>
+                <span class="ink-sep"></span>
+                <div class="ink-group ink-colors" role="group" aria-label="Ngjyra"></div>
+                <span class="ink-sep"></span>
+                <label class="ink-size" title="Trashësia"><span class="ink-size-dot"></span><input type="range" data-ink="size" min="2" max="30" step="1" value="6" aria-label="Trashësia"></label>
+                <span class="ink-sep"></span>
+                <div class="ink-group">
+                    <button class="ink-btn" data-ink="undo" title="Zhbëj (Ctrl+Z)" aria-label="Zhbëj"><svg class="icon"><use href="#i-undo" /></svg></button>
+                    <button class="ink-btn ink-btn--danger" data-ink="clear" title="Fshi shkrimet" aria-label="Fshi shkrimet"><svg class="icon"><use href="#i-trash" /></svg></button>
                 </div>
             </div>
-            <!-- Visual Slide Overlay -->
-            <div id="slide-overlay" class="slide-overlay" style="display: none;">
-                <canvas id="slide-canvas" style="display: none;"></canvas>
-                <img id="slide-img" style="display: none; width: 100%; height: auto; border-radius: 12px;">
-                <video id="slide-video" controls style="display: none; width: 100%; height: auto; border-radius: 12px;"></video>
-                <div class="slide-controls">
-                    <button id="prev-slide" class="slide-mini-btn">←</button>
-                    <span id="slide-num" class="slide-num">Sllajdi 1 / 1</span>
-                    <button id="next-slide" class="slide-mini-btn">→</button>
-                    <button id="max-slide" class="slide-mini-btn" title="Zmadho">⛶</button>
-                    <button id="close-slide" class="slide-mini-btn">×</button>
-                </div>
-            </div>
+            <!-- 3-2-1 countdown before going live -->
+            <div id="countdown-overlay" class="countdown-overlay" hidden><span></span></div>
         </section>
 
-        <aside class="controls-sidebar">
+        <aside class="controls-sidebar" aria-label="Paneli i kontrollit">
+            <!-- Hidden processing surfaces used by the AI pipeline -->
             <div class="video-preview-mini" style="display: none;">
-                <video id="webcam-feed" autoplay playsinline style="display:none;"></video>
+                <video id="webcam-feed" autoplay playsinline muted style="display:none;"></video>
                 <canvas id="output-canvas" style="display: none;"></canvas>
-                <canvas id="gaze-canvas"
-                    style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none;"></canvas>
-                <div id="ai-status">Gaze Tracking: Inactive</div>
-                <div id="mood-feedback" class="mood-overlay">Mood: Calibrating...</div>
+                <canvas id="gaze-canvas" class="overlay-canvas"></canvas>
+                <div id="ai-status">Shikimi: joaktiv</div>
+                <div id="mood-feedback" class="mood-overlay">Shprehja: duke kalibruar…</div>
             </div>
 
-            <div class="control-panel">
-                <div class="control-group">
-                    <label>Studio Effects & Record</label>
-                    <div class="studio-controls">
-                        <button id="blur-btn" class="studio-btn">✨ Blur</button>
-                        <button id="studio-bg-btn" class="studio-btn">🖼 Studio</button>
-                        <button id="record-btn" class="record-btn">⏺ REC</button>
-                    </div>
+            <!-- 1. Live -->
+            <section class="panel panel--live">
+                <div class="live-actions">
+                    <button id="start-btn" class="btn btn-primary btn-lg">
+                        <svg class="icon"><use href="#i-play" /></svg><span class="btn-label">Fillo LIVE</span>
+                    </button>
+                    <button id="stop-btn" class="btn btn-ghost btn-lg" title="Ndalo njohjen e zërit">
+                        <svg class="icon"><use href="#i-stop" /></svg><span class="btn-label">Ndalo</span>
+                    </button>
                 </div>
-
-                <div class="control-group">
-                    <label>Studio Overlays & Graphics</label>
-                    <div class="graphics-controls" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <input type="text" id="lt-name-input" placeholder="Emri Mbiemri" style="padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff;">
-                        <input type="text" id="lt-title-input" placeholder="Titulli (p.sh. Gazetar)" style="padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: #fff;">
-                        <button id="toggle-lt-btn" class="secondary" style="width: 100%;">📛 Shfaq Banner-in</button>
-                    </div>
+                <button id="open-broadcast-btn" class="btn btn-secondary btn-broadcast" title="Dalja 16:9 për OBS / YouTube: kamera + grafika, pa skriptin">
+                    <svg class="icon"><use href="#i-broadcast" /></svg><span class="btn-label">Dalja për YouTube</span>
+                </button>
+                <div class="btn-row">
+                    <button id="open-client-btn" class="btn btn-secondary" title="Ekrani i prezantuesit me tekstin e prompterit">
+                        <svg class="icon"><use href="#i-monitor" /></svg><span class="btn-label">Ekrani i prezantuesit</span>
+                    </button>
+                    <button id="clear-client-draw-btn" class="btn btn-secondary btn-icon-only" title="Fshi të gjitha vizatimet" aria-label="Fshi vizatimet">
+                        <svg class="icon"><use href="#i-eraser" /></svg>
+                    </button>
                 </div>
-
-                <div class="button-grid">
-                    <button id="start-btn">⚡ Fillo LIVE</button>
-                    <button id="stop-btn" class="secondary">🛑 STOP</button>
-                    <button id="open-client-btn" class="secondary">📺 Klienti</button>
-                    <button id="clear-client-draw-btn" class="secondary" title="Fshi të gjitha vizatimet">🧹
-                        Clear</button>
-                </div>
-
-                <div class="control-group">
-                    <label>Script & Slides</label>
-                    <div class="view-mode-flex" style="display: flex; gap: 0.5rem;">
-                        <button id="view-text-btn" class="view-mode-btn active" style="flex:1;">📄 Text</button>
-                        <button id="view-doc-btn" class="view-mode-btn" style="flex:1;">📽️ Slide</button>
+                <details class="study-fields">
+                    <summary>Të dhënat e studimit <span class="muted">(opsionale)</span></summary>
+                    <div class="study-grid">
+                        <input type="text" id="study-participant" class="text-input" placeholder="ID e pjesëmarrësit (p.sh. P01)" aria-label="ID e pjesëmarrësit">
+                        <select id="study-condition" class="text-input" aria-label="Kushti">
+                            <option value="auto">Kushti: automatik</option>
+                            <option value="voice">Njohje zëri</option>
+                            <option value="autoscroll">Lëvizje automatike</option>
+                            <option value="manual">Manual (tastierë)</option>
+                        </select>
+                        <input type="text" id="study-notes" class="text-input" placeholder="Shënime (opsionale)" aria-label="Shënime">
                     </div>
-                    <div class="upload-wrapper" style="margin-top: 0.5rem;">
-                        <input type="file" id="file-upload" accept=".pdf,.docx,.pptx,image/*,video/*" style="display:none;">
-                        <button id="upload-trigger" class="secondary" style="width: 100%;">📤 Upload Media (All)</button>
-                    </div>
-                </div>
+                </details>
+            </section>
 
-                <div class="control-group">
-                    <label>News Script Editor</label>
-                    <textarea id="script-input" placeholder="Shkruani lajmet këtu..."></textarea>
+            <!-- 2. Script -->
+            <section class="panel">
+                <h2 class="panel-title">Skripti</h2>
+                <div class="segmented" role="tablist" aria-label="Pamja">
+                    <button id="view-text-btn" class="view-mode-btn active" role="tab">
+                        <svg class="icon"><use href="#i-text" /></svg>Tekst
+                    </button>
+                    <button id="view-doc-btn" class="view-mode-btn" role="tab">
+                        <svg class="icon"><use href="#i-slides" /></svg>Dokument
+                    </button>
                 </div>
-
-                <div class="control-group">
-                    <label>Auto-Scroll & Speed</label>
-                    <div class="view-mode-flex" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <button id="autoscroll-btn" class="view-mode-btn" style="flex:1;">🔄 Auto-Scroll</button>
-                    </div>
-                    <div class="speed-control-wrapper">
-                        <label style="font-size: 0.6rem;">Scroll Speed: <span id="speed-val">10</span></label>
-                        <input type="range" id="scroll-speed" min="1" max="100" step="1" value="10">
-                    </div>
+                <input type="file" id="file-upload"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.mp4,.webm,.mov,.mp3,.wav,.ogg" hidden>
+                <button id="upload-trigger" class="dropzone" type="button">
+                    <svg class="icon icon-lg"><use href="#i-upload" /></svg>
+                    <span class="btn-label">Ngarko skedar</span>
+                    <span class="dropzone-hint">Kliko ose tërhiq këtu · PDF, Word, PPTX, foto, video</span>
+                </button>
+                <div class="script-toolbar">
+                    <span id="script-title-display" class="script-title">Skript pa titull</span>
+                    <button id="new-script-btn" class="icon-btn icon-btn--sm" title="Skript i ri" aria-label="Skript i ri"><svg class="icon"><use href="#i-plus" /></svg></button>
+                    <button id="open-library-btn" class="icon-btn icon-btn--sm" title="Biblioteka e skripteve" aria-label="Biblioteka"><svg class="icon"><use href="#i-library" /></svg></button>
+                    <button id="save-script-btn" class="icon-btn icon-btn--sm" title="Ruaj skriptin (Ctrl+S)" aria-label="Ruaj"><svg class="icon"><use href="#i-save" /></svg></button>
                 </div>
+                <label class="field-label visually-hidden" for="script-input">Teksti i lajmeve</label>
+                <textarea id="script-input" placeholder="Shkruani ose ngjisni lajmet këtu..."></textarea>
+                <div class="field-meta"><span id="word-count">0 fjalë</span></div>
+            </section>
 
-                <div class="control-group">
-                    <label>Font Size</label>
+            <!-- 3. Reading -->
+            <section class="panel">
+                <h2 class="panel-title">Leximi</h2>
+                <button id="autoscroll-btn" class="btn btn-secondary toggle-btn" aria-pressed="false">
+                    <svg class="icon"><use href="#i-scroll" /></svg><span class="btn-label">Lëvizje automatike</span>
+                    <span class="toggle-pill" aria-hidden="true"></span>
+                </button>
+                <div class="slider-field">
+                    <div class="slider-head">
+                        <label for="scroll-speed">Shpejtësia e lëvizjes</label>
+                        <output id="speed-val" for="scroll-speed">10</output>
+                    </div>
+                    <input type="range" id="scroll-speed" min="1" max="100" step="1" value="10">
+                </div>
+                <h3 class="panel-subtitle">Pamja</h3>
+                <div class="reading-options">
+                    <div class="segmented" role="group" aria-label="Tema e prompterit">
+                        <button id="theme-dark-btn" class="view-mode-btn active"><svg class="icon"><use href="#i-moon" /></svg>E errët</button>
+                        <button id="theme-light-btn" class="view-mode-btn"><svg class="icon"><use href="#i-sun" /></svg>E çelët</button>
+                    </div>
+                    <button id="reading-line-btn" class="btn btn-secondary toggle-btn" aria-pressed="false">
+                        <svg class="icon"><use href="#i-line" /></svg><span class="btn-label">Vija e leximit</span>
+                        <span class="toggle-pill" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div class="slider-field">
+                    <div class="slider-head">
+                        <label for="font-size">Madhësia e shkronjave</label>
+                        <output id="font-size-val" for="font-size">3.5</output>
+                    </div>
                     <input type="range" id="font-size" min="2" max="10" step="0.5" value="3.5">
                 </div>
+            </section>
+
+            <!-- 4. On-air graphics -->
+            <section class="panel">
+                <h2 class="panel-title">Grafika në ekran</h2>
+                <input type="text" id="headline-input" class="text-input" maxlength="90" placeholder="Titulli i lajmit (p.sh. Qeveria miraton buxhetin 2027)" aria-label="Titulli i lajmit">
+                <button id="toggle-headline-btn" class="btn btn-secondary">
+                    <svg class="icon"><use href="#i-text" /></svg><span class="btn-label">Shfaq titullin</span>
+                </button>
+                <h3 class="panel-subtitle">Emri i prezantuesit</h3>
+                <input type="text" id="lt-name-input" class="text-input" placeholder="Emri Mbiemri" aria-label="Emri">
+                <input type="text" id="lt-title-input" class="text-input" placeholder="Titulli (p.sh. Gazetar)" aria-label="Titulli">
+                <button id="toggle-lt-btn" class="btn btn-secondary">
+                    <svg class="icon"><use href="#i-badge" /></svg><span class="btn-label">Shfaq banerin</span>
+                </button>
+            </section>
+
+            <!-- 5. Camera & recording -->
+            <section class="panel">
+                <h2 class="panel-title">Kamera &amp; regjistrimi</h2>
+                <div class="studio-controls">
+                    <button id="blur-btn" class="studio-btn" title="Turbullo sfondin">
+                        <svg class="icon"><use href="#i-blur" /></svg><span>Turbullo</span>
+                    </button>
+                    <button id="studio-bg-btn" class="studio-btn" title="Sfond virtual studioje">
+                        <svg class="icon"><use href="#i-image" /></svg><span>Studio</span>
+                    </button>
+                    <button id="spotlight-fx-btn" class="studio-btn" data-tool="spotlight" title="Prozhektor: ekrani errësohet, ndriçohet vetëm rrethi te gishti (ndiz/fik)" aria-pressed="false">
+                        <svg class="icon"><use href="#i-sun" /></svg><span>Prozhektor</span>
+                    </button>
+                    <button id="record-btn" class="studio-btn record-btn" title="Regjistro videon">
+                        <svg class="icon"><use href="#i-record" /></svg><span class="btn-label">REC</span>
+                    </button>
+                </div>
+            </section>
+
+            <div class="shortcut-hints">
+                <span><kbd>←</kbd><kbd>→</kbd> fjala / faqja</span>
+                <span><kbd>Space</kbd> vazhdo</span>
+                <span><kbd>Ctrl</kbd><kbd>S</kbd> ruaj skriptin</span>
+                <span>Komandë zëri: “fillo prompter” / “stop prompter”</span>
             </div>
         </aside>
     </main>
@@ -160,10 +311,9 @@
         <div class="ticker-label">BREAKING NEWS</div>
         <div class="ticker-content">
             <div class="ticker-track">
-                <span>++ SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI ++</span>
-                <span>++ TEKNOLOGJIA AI PO NDRYSHON BROADCASTING ++</span>
-                <span>++ MËSO SHUMË PËR MASTERIN TËND KËTU ++</span>
-                <span>++ NDRYSHIMET KLIMATIKE: PARASHIKIMI I MOTIT ++</span>
+                <span>SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI</span>
+                <span>TEKNOLOGJIA AI PO NDRYSHON BROADCASTING</span>
+                <span>NDRYSHIMET KLIMATIKE: PARASHIKIMI I MOTIT</span>
             </div>
         </div>
     </footer>
@@ -178,9 +328,25 @@
         <div class="lt-logo">Syri<span>AI</span></div>
     </div>
 
+    <!-- Notifications -->
+    <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
 
-
-    <script src="app.js"></script>
+    <!-- Shared (admin + client) -->
+    <script src="js/shared/sync.js?v=4"></script>
+    <script src="js/shared/matcher.js?v=4"></script>
+    <script src="js/shared/documents.js?v=4"></script>
+    <!-- Admin studio (plain scripts sharing one scope; order matters) -->
+    <script src="js/admin/core.js?v=6"></script>
+    <script src="js/admin/prompter.js?v=4"></script>
+    <script src="js/admin/documents.js?v=6"></script>
+    <script src="js/admin/session.js?v=4"></script>
+    <script src="js/admin/library.js?v=4"></script>
+    <script src="js/admin/settings.js?v=4"></script>
+    <script src="js/admin/ink.js?v=10"></script>
+    <script src="js/admin/camera.js?v=13"></script>
+    <script src="js/admin/recording.js?v=4"></script>
+    <script src="js/admin/graphics.js?v=4"></script>
+    <script src="js/admin/main.js?v=5"></script>
 </body>
 
 </html>

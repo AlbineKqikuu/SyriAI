@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyriAI Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="board.css?v=3">
+    <!-- Hand tracking and background segmentation (MediaPipe) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
+    <!-- Document rendering (same libraries as the studio) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/docx-preview/dist/docx-preview.js"></script>
+    <script type="module">
+        import { PptxRenderer } from 'https://cdn.jsdelivr.net/npm/pptx-browser/+esm';
+        window.PptxRenderer = PptxRenderer;
+    </script>
+</head>
+
+<!-- Camera on one side, any file on the other, writing on the file with the index finger. -->
+
+<body>
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="b-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></symbol>
+        <symbol id="b-neon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></symbol>
+        <symbol id="b-marker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" /></symbol>
+        <symbol id="b-rainbow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17a10 10 0 0 0-20 0" /><path d="M6 17a6 6 0 0 1 12 0" /><path d="M10 17a2 2 0 0 1 4 0" /></symbol>
+        <symbol id="b-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m12 8 1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2z" /></symbol>
+        <symbol id="b-laser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="8" stroke-dasharray="3 3" /></symbol>
+        <symbol id="b-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" /><path d="M22 21H7" /><path d="m5 11 9 9" /></symbol>
+        <symbol id="b-spot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></symbol>
+        <symbol id="b-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></symbol>
+        <symbol id="b-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></symbol>
+        <symbol id="b-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></symbol>
+        <symbol id="b-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></symbol>
+        <symbol id="b-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14" /></symbol>
+        <symbol id="b-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+        <symbol id="b-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></symbol>
+        <symbol id="b-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" /></symbol>
+        <symbol id="b-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></symbol>
+        <symbol id="b-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4" /><path d="M20 7H4" /><path d="m8 21-4-4 4-4" /><path d="M4 17h16" /></symbol>
+        <symbol id="b-split" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></symbol>
+        <symbol id="b-pip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><rect x="5.5" y="12" width="7" height="5.5" rx="1" fill="currentColor" stroke="none" /></symbol>
+        <symbol id="b-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8" /><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15" /></symbol>
+        <symbol id="b-mouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 6v4" /></symbol>
+        <symbol id="b-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="m7 21 5-4 5 4" /></symbol>
+        <symbol id="b-studio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></symbol>
+        <symbol id="b-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></symbol>
+        <symbol id="b-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></symbol>
+    </svg>
+
+    <div class="bd-aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+    <header class="bd-header">
+        <div class="bd-header-left">
+            <a href="AdminPage.html" class="bd-back" title="Kthehu te studioja e teleprompterit">
+                <svg class="ic"><use href="#b-studio" /></svg>Studio
+            </a>
+            <div class="bd-logo">Syri<span>AI</span> <small>Board</small></div>
+        </div>
+        <div class="bd-header-center">
+            <div id="hand-status" class="bd-pill" data-state="loading">
+                <span class="bd-pill-dot"></span><span id="hand-status-text">Dora: duke u ngarkuar…</span>
+            </div>
+            <div id="rec-pill" class="bd-pill bd-pill--rec" hidden>
+                <span class="bd-pill-dot"></span>REC <span id="rec-time">0:00</span>
+            </div>
+        </div>
+        <div class="bd-header-right">
+            <div id="clock" class="bd-clock">00:00:00</div>
+            <a href="/logout" class="bd-icon-btn" title="Dil nga llogaria" aria-label="Dil">
+                <svg class="ic"><use href="#b-logout" /></svg>
+            </a>
+        </div>
+    </header>
+
+    <main id="workspace" class="bd-main" data-layout="split">
+        <!-- Camera -->
+        <section id="cam-panel" class="bd-panel bd-cam" aria-label="Kamera">
+            <div class="bd-panel-head">
+                <h2 class="bd-panel-title"><span class="bd-live-dot"></span>Kamera</h2>
+                <div class="bd-chips">
+                    <span id="gesture-chip" class="bd-chip">Pa dorë</span>
+                    <span id="fx-chip" class="bd-chip bd-chip--fx">Normale</span>
+                </div>
+            </div>
+            <div id="cam-frame" class="bd-cam-frame" data-mirror="true">
+                <video id="cam-video" playsinline muted></video>
+                <canvas id="cam-canvas" class="bd-cam-canvas"></canvas>
+                <canvas id="cam-overlay" class="bd-cam-canvas bd-cam-overlay"></canvas>
+                <div id="cam-flash" class="bd-flash"></div>
+                <div id="cam-state" class="bd-cam-state">
+                    <span class="bd-spinner"></span>
+                    <span id="cam-state-text">Kamera po ndizet…</span>
+                </div>
+                <div class="bd-cam-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="bd-gesture-strip" aria-label="Gjestet">
+                <span data-g="draw">☝️ <b>Shkruaj</b></span>
+                <span data-g="point">✌️ <b>Tregues</b></span>
+                <span data-g="scroll">🤟 <b>Lëviz</b></span>
+                <span data-g="palm">✋ <b>Mbaj = pastro</b></span>
+                <span data-g="thumbs">👍 <b>Reagim</b></span>
+            </div>
+        </section>
+
+        <!-- Files -->
+        <section id="media-panel" class="bd-panel bd-media" aria-label="Media">
+            <div class="bd-panel-head">
+                <h2 class="bd-panel-title"><span id="doc-kind" class="bd-kind" data-kind="board" hidden>TABELË</span><span id="doc-title" class="bd-doc-title">Ngarko një skedar</span></h2>
+                <div class="bd-head-actions">
+                    <button id="upload-btn" class="bd-btn bd-btn--accent" title="Ngarko foto, PDF, Word, PowerPoint, video, audio ose tekst">
+                        <svg class="ic"><use href="#b-upload" /></svg>Ngarko
+                    </button>
+                    <button id="fullscreen-btn" class="bd-icon-btn" title="Ekran i plotë (F)" aria-label="Ekran i plotë">
+                        <svg class="ic"><use href="#b-full" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="stage" class="bd-stage">
+                <div id="docs" class="bd-docs"></div>
+                <!-- Start screen: upload a file to write on it, or open a blank whiteboard -->
+                <div id="empty" class="bd-empty">
+                    <div class="bd-empty-icon"><svg class="ic ic-xl"><use href="#b-upload" /></svg></div>
+                    <strong>Ngarko skedarin për të shkruar mbi të</strong>
+                    <span>Foto · PDF · Word · PowerPoint · Video · Audio · Tekst — kliko, tërhiq këtu ose ngjit (Ctrl+V)</span>
+                    <div class="bd-empty-actions">
+                        <button id="empty-upload-btn" class="bd-btn bd-btn--accent"><svg class="ic"><use href="#b-upload" /></svg>Ngarko skedar</button>
+                        <button id="empty-board-btn" class="bd-btn"><svg class="ic"><use href="#b-board" /></svg>Tabelë e bardhë</button>
+                    </div>
+                </div>
+                <canvas id="ink" class="bd-layer"></canvas>
+                <canvas id="fx" class="bd-layer bd-layer--fx"></canvas>
+                <!-- Quick toolbar over the open file: tool, colour, size, undo, clear -->
+                <div id="quickbar" class="bd-quickbar" hidden>
+                    <div class="bd-q-group">
+                        <button class="bd-qtool" data-tool="pen" title="Laps" aria-label="Laps"><svg class="ic"><use href="#b-pen" /></svg></button>
+                        <button class="bd-qtool" data-tool="neon" title="Neon" aria-label="Neon"><svg class="ic"><use href="#b-neon" /></svg></button>
+                        <button class="bd-qtool" data-tool="highlighter" title="Theksues" aria-label="Theksues"><svg class="ic"><use href="#b-marker" /></svg></button>
+                        <button class="bd-qtool" data-tool="rainbow" title="Ylber" aria-label="Ylber"><svg class="ic"><use href="#b-rainbow" /></svg></button>
+                        <button class="bd-qtool" data-tool="sparkle" title="Shkëndija" aria-label="Shkëndija"><svg class="ic"><use href="#b-sparkle" /></svg></button>
+                        <button class="bd-qtool" data-tool="laser" title="Lazer" aria-label="Lazer"><svg class="ic"><use href="#b-laser" /></svg></button>
+                        <button class="bd-qtool" data-tool="spotlight" title="Prozhektor" aria-label="Prozhektor"><svg class="ic"><use href="#b-spot" /></svg></button>
+                        <button class="bd-qtool" data-tool="eraser" title="Gomë" aria-label="Gomë"><svg class="ic"><use href="#b-eraser" /></svg></button>
+                    </div>
+                    <span class="bd-q-sep"></span>
+                    <div id="q-colors" class="bd-q-group bd-q-colors" role="radiogroup" aria-label="Ngjyra"></div>
+                    <span class="bd-q-sep"></span>
+                    <label class="bd-q-size" title="Trashësia"><span id="q-size-dot" class="bd-q-size-dot"></span><input type="range" id="q-size" min="2" max="30" step="1" value="6" aria-label="Trashësia"></label>
+                    <span class="bd-q-sep"></span>
+                    <div class="bd-q-group">
+                        <button id="q-mouse" class="bd-qtool" title="Vizato me maus / laps" aria-label="Vizato me maus" aria-pressed="false"><svg class="ic"><use href="#b-mouse" /></svg></button>
+                        <button id="q-undo" class="bd-qtool" title="Zhbëj (Ctrl+Z)" aria-label="Zhbëj"><svg class="ic"><use href="#b-undo" /></svg></button>
+                        <button id="q-clear" class="bd-qtool bd-qtool--danger" title="Pastro shkrimet (C)" aria-label="Pastro"><svg class="ic"><use href="#b-trash" /></svg></button>
+                    </div>
+                </div>
+                <div id="reactions" class="bd-reactions" aria-hidden="true"></div>
+                <div id="drop-hint" class="bd-drop-hint" hidden>
+                    <svg class="ic ic-xl"><use href="#b-upload" /></svg>
+                    <strong>Lëshoje këtu</strong>
+                    <span>Foto · PDF · Word · PowerPoint · Video · Audio · Tekst</span>
+                </div>
+            </div>
+            <div class="bd-strip-wrap">
+                <div id="strip" class="bd-strip" role="tablist" aria-label="Skedarët e hapur"></div>
+                <button id="new-board-btn" class="bd-icon-btn bd-icon-btn--sm" title="Tabelë e re e bardhë" aria-label="Tabelë e re">
+                    <svg class="ic"><use href="#b-plus" /></svg>
+                </button>
+            </div>
+            <input type="file" id="file-input" multiple hidden
+                accept=".pdf,.docx,.pptx,.doc,.ppt,.txt,.md,.csv,.json,image/*,video/*,audio/*">
+        </section>
+
+        <!-- Controls -->
+        <aside class="bd-panel bd-side" aria-label="Kontrollet">
+            <section class="bd-group">
+                <h3 class="bd-group-title">Mjetet</h3>
+                <div class="bd-tools" role="radiogroup" aria-label="Mjeti i shkrimit">
+                    <button class="bd-tool" data-tool="pen" title="Laps (P)"><svg class="ic"><use href="#b-pen" /></svg><span>Laps</span></button>
+                    <button class="bd-tool" data-tool="neon" title="Neon që shkëlqen (N)"><svg class="ic"><use href="#b-neon" /></svg><span>Neon</span></button>
+                    <button class="bd-tool" data-tool="highlighter" title="Theksues (H)"><svg class="ic"><use href="#b-marker" /></svg><span>Theksues</span></button>
+                    <button class="bd-tool" data-tool="rainbow" title="Ylber (R)"><svg class="ic"><use href="#b-rainbow" /></svg><span>Ylber</span></button>
+                    <button class="bd-tool" data-tool="sparkle" title="Shkëndija (K)"><svg class="ic"><use href="#b-sparkle" /></svg><span>Shkëndija</span></button>
+                    <button class="bd-tool" data-tool="laser" title="Lazer që zhduket (L)"><svg class="ic"><use href="#b-laser" /></svg><span>Lazer</span></button>
+                    <button class="bd-tool" data-tool="spotlight" title="Prozhektor: ndriçon vetëm aty ku tregon (S)"><svg class="ic"><use href="#b-spot" /></svg><span>Prozhektor</span></button>
+                    <button class="bd-tool" data-tool="eraser" title="Gomë (E)"><svg class="ic"><use href="#b-eraser" /></svg><span>Gomë</span></button>
+                </div>
+                <div class="bd-colors" role="radiogroup" aria-label="Ngjyra">
+                    <!-- swatches are added by board.js -->
+                    <label class="bd-swatch bd-swatch--custom" title="Ngjyrë tjetër">
+                        <input type="color" id="custom-color" value="#22d3ee" aria-label="Ngjyrë tjetër">
+                    </label>
+                </div>
+                <div class="bd-slider">
+                    <div class="bd-slider-head"><label for="size-input">Trashësia</label><output id="size-val">6</output></div>
+                    <input type="range" id="size-input" min="2" max="30" step="1" value="6">
+                </div>
+                <div class="bd-row">
+                    <button id="undo-btn" class="bd-btn" title="Zhbëj (Ctrl+Z)"><svg class="ic"><use href="#b-undo" /></svg>Zhbëj</button>
+                    <button id="redo-btn" class="bd-btn" title="Ribëj (Ctrl+Shift+Z)"><svg class="ic"><use href="#b-redo" /></svg>Ribëj</button>
+                    <button id="clear-btn" class="bd-btn bd-btn--danger" title="Pastro shkrimet (C)"><svg class="ic"><use href="#b-trash" /></svg></button>
+                </div>
+            </section>
+
+            <section class="bd-group">
+                <h3 class="bd-group-title">Dora &amp; shkrimi</h3>
+                <button id="hand-toggle" class="bd-toggle" aria-pressed="true">
+                    <svg class="ic"><use href="#b-hand" /></svg><span>Shkrim me gisht</span><i class="bd-switch"></i>
+                </button>
+                <button id="mouse-toggle" class="bd-toggle" aria-pressed="false">
+                    <svg class="ic"><use href="#b-mouse" /></svg><span>Shkrim me maus / laps</span><i class="bd-switch"></i>
+                </button>
+                <button id="skeleton-toggle" class="bd-toggle" aria-pressed="true">
+                    <svg class="ic"><use href="#b-sparkle" /></svg><span>Skeleti i dorës</span><i class="bd-switch"></i>
+                </button>
+                <div class="bd-slider">
+                    <div class="bd-slider-head"><label for="smooth-input">Stabilizimi i shkrimit</label><output id="smooth-val">50%</output></div>
+                    <input type="range" id="smooth-input" min="0" max="100" step="5" value="50">
+                </div>
+            </section>
+
+            <section class="bd-group">
+                <h3 class="bd-group-title">Efektet e kamerës</h3>
+                <div id="fx-grid" class="bd-fx-grid">
+                    <button class="bd-fx" data-fx="none"><i></i><span>Normale</span></button>
+                    <button class="bd-fx" data-fx="blur"><i></i><span>Turbullo</span></button>
+                    <button class="bd-fx" data-fx="studio"><i></i><span>Studio</span></button>
+                    <button class="bd-fx" data-fx="synth"><i></i><span>Synthwave</span></button>
+                    <button class="bd-fx" data-fx="aura"><i></i><span>Aura</span></button>
+                    <button class="bd-fx" data-fx="noir"><i></i><span>Noir</span></button>
+                    <button class="bd-fx" data-fx="cinema"><i></i><span>Kinema</span></button>
+                    <button class="bd-fx" data-fx="cyber"><i></i><span>Cyber</span></button>
+                    <button class="bd-fx" data-fx="vintage"><i></i><span>Vintage</span></button>
+                </div>
+                <button id="vignette-toggle" class="bd-toggle" aria-pressed="false">
+                    <svg class="ic"><use href="#b-spot" /></svg><span>Vinjeta</span><i class="bd-switch"></i>
+                </button>
+                <button id="mirror-toggle" class="bd-toggle" aria-pressed="true">
+                    <svg class="ic"><use href="#b-swap" /></svg><span>Pasqyro kamerën</span><i class="bd-switch"></i>
+                </button>
+            </section>
+
+            <section class="bd-group">
+                <h3 class="bd-group-title">Reagime</h3>
+                <div class="bd-reacts">
+                    <button class="bd-react" data-emoji="👍">👍</button>
+                    <button class="bd-react" data-emoji="❤️">❤️</button>
+                    <button class="bd-react" data-emoji="🔥">🔥</button>
+                    <button class="bd-react" data-emoji="👏">👏</button>
+                    <button class="bd-react" data-emoji="😮">😮</button>
+                    <button class="bd-react bd-react--wide" data-emoji="confetti">🎉 Konfeti</button>
+                </div>
+            </section>
+
+            <section class="bd-group">
+                <h3 class="bd-group-title">Pamja &amp; regjistrimi</h3>
+                <div class="bd-segmented" role="group" aria-label="Pamja">
+                    <button data-layout="split" title="Kamera dhe skedari krah për krah"><svg class="ic"><use href="#b-split" /></svg>Ndarë</button>
+                    <button data-layout="pip" title="Skedari i madh, kamera e vogël në cep"><svg class="ic"><use href="#b-pip" /></svg>Kamera e vogël</button>
+                </div>
+                <div class="bd-row">
+                    <button id="swap-btn" class="bd-btn" title="Ndërro anët"><svg class="ic"><use href="#b-swap" /></svg>Ndërro anët</button>
+                </div>
+                <div class="bd-row">
+                    <button id="record-btn" class="bd-btn bd-btn--rec" title="Regjistro kamerën me efekte"><svg class="ic"><use href="#b-record" /></svg><span>Regjistro</span></button>
+                    <button id="snapshot-btn" class="bd-btn" title="Foto e kamerës"><svg class="ic"><use href="#b-camera" /></svg>Foto</button>
+                    <button id="export-btn" class="bd-btn" title="Ruaj shkrimet si PNG"><svg class="ic"><use href="#b-download" /></svg>PNG</button>
+                </div>
+            </section>
+
+            <p class="bd-keys">
+                <kbd>P</kbd><kbd>N</kbd><kbd>H</kbd><kbd>L</kbd><kbd>E</kbd> mjetet · <kbd>Ctrl</kbd><kbd>Z</kbd> zhbëj ·
+                <kbd>C</kbd> pastro · <kbd>←</kbd><kbd>→</kbd> skedari · <kbd>F</kbd> ekran i plotë
+            </p>
+        </aside>
+    </main>
+
+    <div id="toast-stack" class="bd-toasts" aria-live="polite"></div>
+
+    <script src="js/shared/documents.js?v=5"></script>
+    <script src="js/board.js?v=4"></script>
+</body>
+
+</html>

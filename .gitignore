@@ -31,3 +31,6 @@ dist/
 # Firebase
 .firebase/
 firebase-debug.log
+
+# Uploaded studio media
+App_Data/

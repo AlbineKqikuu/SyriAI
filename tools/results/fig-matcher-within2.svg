@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" width="760" height="440" font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+<rect width="760" height="440" fill="#ffffff"/>
+<text x="24" y="32" font-size="17" font-weight="700" fill="#202124">Sa shpesh theksimi është brenda ±2 fjalëve</text>
+<text x="24" y="52" font-size="12" fill="#5f6368">Zhurmë e simuluar e njohjes së zërit · 3 tekste × 30 përsëritje · shiritat e gabimit = ±1 SD</text>
+<line x1="70" y1="380" x2="736" y2="380" stroke="#e3e6ea"/>
+<text x="62" y="384" font-size="11" fill="#5f6368" text-anchor="end">0</text>
+<line x1="70" y1="320" x2="736" y2="320" stroke="#e3e6ea"/>
+<text x="62" y="324" font-size="11" fill="#5f6368" text-anchor="end">20</text>
+<line x1="70" y1="260" x2="736" y2="260" stroke="#e3e6ea"/>
+<text x="62" y="264" font-size="11" fill="#5f6368" text-anchor="end">40</text>
+<line x1="70" y1="200" x2="736" y2="200" stroke="#e3e6ea"/>
+<text x="62" y="204" font-size="11" fill="#5f6368" text-anchor="end">60</text>
+<line x1="70" y1="140" x2="736" y2="140" stroke="#e3e6ea"/>
+<text x="62" y="144" font-size="11" fill="#5f6368" text-anchor="end">80</text>
+<line x1="70" y1="80" x2="736" y2="80" stroke="#e3e6ea"/>
+<text x="62" y="84" font-size="11" fill="#5f6368" text-anchor="end">100</text>
+<text x="18" y="230" font-size="12" fill="#5f6368" text-anchor="middle" transform="rotate(-90 18 230)">Përditësime brenda ±2 fjalëve (%)</text>
+<rect x="100.6" y="80" width="34" height="300" fill="#0a66c2" rx="2"/>
+<line x1="117.6" y1="80" x2="117.6" y2="80" stroke="#202124" stroke-width="1.2"/>
+<line x1="112.6" y1="80" x2="122.6" y2="80" stroke="#202124" stroke-width="1.2"/>
+<rect x="138.6" y="80" width="34" height="300" fill="#e8710a" rx="2"/>
+<line x1="155.6" y1="80" x2="155.6" y2="80" stroke="#202124" stroke-width="1.2"/>
+<line x1="150.6" y1="80" x2="160.6" y2="80" stroke="#202124" stroke-width="1.2"/>
+<text x="136.6" y="400" font-size="12" fill="#202124" text-anchor="middle">Pa zhurmë</text>
+<rect x="233.79999999999998" y="100.97008933052302" width="34" height="279.029910669477" fill="#0a66c2" rx="2"/>
+<line x1="250.79999999999998" y1="87.61555714281025" x2="250.79999999999998" y2="114.3246215182358" stroke="#202124" stroke-width="1.2"/>
+<line x1="245.79999999999998" y1="87.61555714281025" x2="255.79999999999998" y2="87.61555714281025" stroke="#202124" stroke-width="1.2"/>
+<rect x="271.79999999999995" y="80" width="34" height="300" fill="#e8710a" rx="2"/>
+<line x1="288.79999999999995" y1="80" x2="288.79999999999995" y2="80" stroke="#202124" stroke-width="1.2"/>
+<line x1="283.79999999999995" y1="80" x2="293.79999999999995" y2="80" stroke="#202124" stroke-width="1.2"/>
+<text x="269.79999999999995" y="400" font-size="12" fill="#202124" text-anchor="middle">Vetëm diakritikë</text>
+<rect x="367" y="92.01595904847932" width="34" height="287.9840409515207" fill="#0a66c2" rx="2"/>
+<line x1="384" y1="80" x2="384" y2="106.07544162043428" stroke="#202124" stroke-width="1.2"/>
+<line x1="379" y1="80" x2="389" y2="80" stroke="#202124" stroke-width="1.2"/>
+<rect x="405" y="80.53196828264578" width="34" height="299.4680317173542" fill="#e8710a" rx="2"/>
+<line x1="422" y1="80" x2="422" y2="82.14825348493747" stroke="#202124" stroke-width="1.2"/>
+<line x1="417" y1="80" x2="427" y2="80" stroke="#202124" stroke-width="1.2"/>
+<text x="403" y="400" font-size="12" fill="#202124" text-anchor="middle">E lehtë</text>
+<rect x="500.19999999999993" y="112.63223928535587" width="34" height="267.36776071464413" fill="#0a66c2" rx="2"/>
+<line x1="517.1999999999999" y1="94.72134704142644" x2="517.1999999999999" y2="130.54313152928532" stroke="#202124" stroke-width="1.2"/>
+<line x1="512.1999999999999" y1="94.72134704142644" x2="522.1999999999999" y2="94.72134704142644" stroke="#202124" stroke-width="1.2"/>
+<rect x="538.1999999999999" y="81.39215095854644" width="34" height="298.60784904145356" fill="#e8710a" rx="2"/>
+<line x1="555.1999999999999" y1="80" x2="555.1999999999999" y2="84.07230441774288" stroke="#202124" stroke-width="1.2"/>
+<line x1="550.1999999999999" y1="80" x2="560.1999999999999" y2="80" stroke="#202124" stroke-width="1.2"/>
+<text x="536.1999999999999" y="400" font-size="12" fill="#202124" text-anchor="middle">Mesatare</text>
+<rect x="633.4" y="137.85054702398875" width="34" height="242.14945297601125" fill="#0a66c2" rx="2"/>
+<line x1="650.4" y1="113.90461301985073" x2="650.4" y2="161.79648102812683" stroke="#202124" stroke-width="1.2"/>
+<line x1="645.4" y1="113.90461301985073" x2="655.4" y2="113.90461301985073" stroke="#202124" stroke-width="1.2"/>
+<rect x="671.4" y="83.8893907457591" width="34" height="296.1106092542409" fill="#e8710a" rx="2"/>
+<line x1="688.4" y1="80" x2="688.4" y2="88.99506650793842" stroke="#202124" stroke-width="1.2"/>
+<line x1="683.4" y1="80" x2="693.4" y2="80" stroke="#202124" stroke-width="1.2"/>
+<text x="669.4" y="400" font-size="12" fill="#202124" text-anchor="middle">E rëndë</text>
+<line x1="70" y1="380" x2="736" y2="380" stroke="#5f6368"/>
+<rect x="70" y="412" width="12" height="12" rx="2" fill="#0a66c2"/>
+<text x="88" y="422" font-size="12" fill="#202124">Algoritmi fillestar</text>
+<rect x="233" y="412" width="12" height="12" rx="2" fill="#e8710a"/>
+<text x="251" y="422" font-size="12" fill="#202124">Algoritmi i ri</text>
+</svg>

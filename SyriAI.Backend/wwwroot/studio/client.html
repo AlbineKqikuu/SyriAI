@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyriAI Client - Studio View</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=4">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,8 +14,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
         crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/docx-preview/dist/docx-preview.js"></script>
+    <script type="module">
+        import { PptxRenderer } from 'https://cdn.jsdelivr.net/npm/pptx-browser/+esm';
+        window.PptxRenderer = PptxRenderer;
+    </script>
     <style>
         body {
             display: flex;
@@ -34,23 +40,23 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 80px;
-            background: #001a33; /* Dark Blue */
-            backdrop-filter: blur(20px);
-            border-bottom: 3px solid #004d99; /* Blue border */
+            height: 72px;
+            background: linear-gradient(90deg, #00152b 0%, #002447 60%, #003366 100%);
+            border-bottom: 3px solid var(--accent-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 2rem;
             z-index: 10000;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
 
         .client-split-container {
             display: flex;
             width: 100vw;
-            height: calc(100vh - 160px); /* Room for top (80px) and bottom (80px) */
-            margin-top: 80px;
+            height: calc(100vh - 196px);
+            /* Room for header (72px), Breaking News (44px) and sponsors (80px) */
+            margin-top: 72px;
         }
 
         .camera-half {
@@ -92,8 +98,9 @@
 
         #client-script-display {
             font-size: 3.5rem;
-            line-height: 1.4;
-            font-weight: 600;
+            line-height: 1.45;
+            font-weight: 700;
+            letter-spacing: -0.01em;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: pre-wrap;
             text-align: center;
@@ -102,25 +109,64 @@
         .client-header-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #ffcc00; /* Yellow Logo */
-            letter-spacing: -1.5px;
-            text-transform: none;
-            text-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            gap: 14px;
             white-space: nowrap;
         }
 
-        .client-header-logo span {
+        .client-header-logo .brand {
+            font-size: 1.7rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             color: #fff;
         }
 
-        .client-clock {
-            font-family: 'Courier New', monospace;
-            font-size: 1.4rem;
-            color: var(--accent-color);
+        .client-header-logo .brand span {
+            color: #4da3ff;
+        }
+
+        .brand-tag {
+            font-size: 0.7rem;
             font-weight: 700;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 0.2rem 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.35rem 0.8rem;
+            background: #e0241b;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+        }
+
+        .live-pill .live-dot {
+            width: 9px;
+            height: 9px;
+            background: #fff;
+            box-shadow: none;
+        }
+
+        .client-footer-logo {
+            padding: 0 2rem;
+            height: 100%;
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .client-clock {
+            font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #fff;
+            letter-spacing: 1px;
+            font-variant-numeric: tabular-nums;
         }
 
         /* Marker for the reading line */
@@ -138,27 +184,7 @@
             transform: translateY(-50%);
         }
 
-        /* Override style.css word highlights for client view */
-        .word-span {
-            display: inline-block;
-            transition: all 0.3s ease;
-            margin: 0 0.2em;
-        }
-
-        .highlight {
-            color: #fff !important;
-            background: #007aff !important;
-            box-shadow: 0 0 40px rgba(0, 122, 255, 0.8), 0 0 10px #fff;
-            border-radius: 8px;
-            padding: 0 10px;
-            transform: scale(1.1) !important;
-            z-index: 50;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-
-        .read {
-            opacity: 0.3;
-        }
+        /* Word styles come from style.css (shared with the admin prompter) */
 
         /* Client Frame Elements */
         .client-content-frame {
@@ -180,9 +206,20 @@
         }
 
         @keyframes pulse-live {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.4); opacity: 0.5; }
-            100% { transform: scale(1); opacity: 1; }
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .client-main-viewport {
@@ -193,23 +230,30 @@
             flex-direction: column;
         }
 
+        .client-news-ticker {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 80px;
+            z-index: 10000;
+        }
+
         .client-sponsor-banner {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100vw;
             height: 80px;
-            background: #001a33; /* Dark Blue Background */
+            background: linear-gradient(90deg, #00152b 0%, #002447 100%);
             display: flex;
             align-items: center;
             overflow: hidden;
             z-index: 10000;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
-            border-top: 3px solid #004d99; /* Blue top border */
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .sponsor-label {
-            background: rgba(0,0,0,0.4); 
+            background: var(--accent-color);
             color: #fff;
             font-weight: 800;
             font-size: 0.9rem;
@@ -220,7 +264,7 @@
             text-transform: uppercase;
             letter-spacing: 1.5px;
             z-index: 10;
-            box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+            box-shadow: 10px 0 20px rgba(0, 0, 0, 0.3);
             white-space: nowrap;
         }
 
@@ -243,15 +287,20 @@
             gap: 20px;
             padding: 0 5rem;
             color: #fff;
-            font-weight: 800;
-            font-size: 1.5rem; /* Larger text */
-            letter-spacing: 1px;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: 1.5px;
+            opacity: 0.9;
         }
 
         @keyframes sponsor-scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
         }
 
         /* Update PDF Area for Frame */
@@ -274,14 +323,13 @@
     <!-- Top Header Banner (Full Width, Dark Blue) -->
     <div class="client-header-banner">
         <div class="client-header-logo">
-            <div class="live-dot"></div>
-            Syri<span>AI</span> STUDIO
+            <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+            <span class="brand">Syri<span>AI</span></span>
+            <small class="brand-tag">STUDIO</small>
         </div>
         <div style="display: flex; align-items: center; gap: 2rem;">
             <div class="client-clock" id="client-time-top">00:00:00</div>
-            <div id="connection-indicator"
-                style="width: 14px; height: 14px; border-radius: 50%; background: var(--success-color); box-shadow: 0 0 15px var(--success-color);">
-            </div>
+            <span id="connection-indicator" class="sync-status sync-status--lg" data-status="connecting" title="Duke u lidhur…"></span>
         </div>
     </div>
 
@@ -301,13 +349,12 @@
                     <div class="client-scroll-container" id="client-scroll-box">
                         <div id="client-script-display">Pret skriptin nga Admin...</div>
                     </div>
-                    
+
                     <!-- Client Visual Slide Panel (PDF/Images/Video) -->
-                    <div id="client-slide-area" class="client-slide-area" style="display: none;">
-                        <canvas id="client-slide-canvas" style="display: none;"></canvas>
-                        <img id="client-slide-img" style="display: none; width: 100%; height: auto; border-radius: 12px;">
-                        <video id="client-slide-video" controls autoplay style="display: none; width: 100%; height: auto; border-radius: 12px;"></video>
-                    </div>
+                    <div id="client-slide-area" class="client-slide-area" style="display: none;"></div>
+
+                    <!-- 3-2-1 countdown before going live -->
+                    <div id="countdown-overlay" class="countdown-overlay" hidden><span></span></div>
 
                     <!-- Drawing Glass Overlays -->
                     <canvas id="drawglass"
@@ -323,11 +370,22 @@
         </div>
     </div>
 
+    <!-- Breaking News ticker (same component as the admin studio; text comes from Settings) -->
+    <footer class="news-ticker client-news-ticker">
+        <div class="ticker-label">BREAKING NEWS</div>
+        <div class="ticker-content">
+            <div class="ticker-track" id="news-ticker-track">
+                <span>SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI</span>
+                <span>TEKNOLOGJIA AI PO NDRYSHON BROADCASTING</span>
+                <span>NDRYSHIMET KLIMATIKE: PARASHIKIMI I MOTIT</span>
+            </div>
+        </div>
+    </footer>
+
     <!-- Bottom Sponsor Banner (Full Width, Dark Blue) -->
     <div class="client-sponsor-banner">
-        <div class="client-header-logo" style="padding: 0 2rem; border-right: 2px solid rgba(255,255,255,0.1); height: 100%;">
-            <div class="live-dot"></div>
-            Syri<span>AI</span>
+        <div class="client-header-logo client-footer-logo">
+            <span class="brand">Syri<span>AI</span></span>
         </div>
         <div class="sponsor-label">SPONSORËT TANË</div>
         <div class="sponsor-ticker">
@@ -357,7 +415,9 @@
         <div class="lt-logo">Syri<span>AI</span></div>
     </div>
 
-    <script src="client.js"></script>
+    <script src="js/shared/sync.js?v=4"></script>
+    <script src="js/shared/documents.js?v=4"></script>
+    <script src="client.js?v=6"></script>
 </body>
 
 </html>

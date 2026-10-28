@@ -14,54 +14,82 @@
             <span class="visually-hidden">Loading...</span>
         </div>
         <h2 class="text-white fw-bold">Duke hapur Studion...</h2>
-        <p class="text-muted">Ridrejtimi automatik po kryhet. Nëse nuk ndodh, <a href="/studio/AdminPage.html" class="text-primary">klikoni këtu</a>.</p>
     </div>
 }
 else
 {
-    <div class="hero-section d-flex align-items-center justify-content-center">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8 text-center">
-                    <div class="brand-badge mb-4">SYRIAI BROADCAST</div>
-                    <h1 class="hero-title mb-4">
-                        Fuqizoni Transmetimin tuaj me <span class="gradient-text">Inteligjencë Artificiale</span>
-                    </h1>
-                    <p class="hero-subtitle mb-5">
-                        Platforma profesionale për teleprompter, analitikë të shikimit dhe efekte në kohë reale. 
-                        Kyçuni në studio për të nisur prodhimin tuaj të ardhshëm.
-                    </p>
-                    
-                    <div class="cta-wrapper d-flex flex-column flex-sm-row gap-4 justify-content-center">
-                        <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg cta-btn shadow-glow">
-                            <span class="btn-text">KYÇU (LOGIN)</span>
-                            <span class="btn-icon">→</span>
-                        </a>
-                        <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-outline-light btn-lg cta-btn">
-                            KRIJO LLOGARI
-                        </a>
-                    </div>
+    <div class="auth-wrapper d-flex align-items-center justify-content-center">
+        <div class="background-decorations">
+            <div class="glow-sphere sphere-1"></div>
+            <div class="glow-sphere sphere-2"></div>
+        </div>
 
-                    <div class="features-preview mt-5 pt-4">
-                        <div class="row g-4">
-                            <div class="col-4">
-                                <div class="f-item">
-                                    <span class="f-icon">👁️</span>
-                                    <span class="f-label">Gaze Tracking</span>
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h1 class="display-4 fw-800 text-white mb-2">SYRIAI <span class="gradient-accent text-glow">STUDIO</span></h1>
+                <p class="text-muted fs-5">Zgjidhni opsionin tuaj për të hyrë në transmetim</p>
+            </div>
+
+            <div class="row g-5 justify-content-center">
+                <!-- Login Card -->
+                <div class="col-lg-5 col-md-10">
+                    <div class="auth-card login-variant">
+                        <div class="card-header-custom">
+                            <i class="bi bi-person-lock me-2"></i>
+                            KYÇJA (LOGIN)
+                        </div>
+                        <div class="card-body-custom">
+                            <form method="post" action="/Identity/Account/Login">
+                                @Html.AntiForgeryToken()
+                                <div class="form-floating mb-3">
+                                    <input type="email" name="Input.Email" class="form-control" id="loginEmail" placeholder="email@shembull.com" required>
+                                    <label for="loginEmail">Email Address</label>
                                 </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="f-item">
-                                    <span class="f-icon">⏳</span>
-                                    <span class="f-label">Real-time Analytics</span>
+                                <div class="form-floating mb-3">
+                                    <input type="password" name="Input.Password" class="form-control" id="loginPass" placeholder="••••••••" required>
+                                    <label for="loginPass">Password</label>
                                 </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="f-item">
-                                    <span class="f-icon">🎬</span>
-                                    <span class="f-label">Studio Effects</span>
+                                <button type="submit" class="btn btn-primary-premium w-100 mt-3">
+                                    <span>HYR NË STUDIO</span>
+                                    <i class="bi bi-chevron-right ms-2"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vertical Divider (Desktop Only) -->
+                <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
+                    <div class="auth-divider">OSE</div>
+                </div>
+
+                <!-- Register Card -->
+                <div class="col-lg-5 col-md-10">
+                    <div class="auth-card register-variant">
+                        <div class="card-header-custom accent-cyan">
+                            <i class="bi bi-person-plus me-2"></i>
+                            KRIJO LLOGARI
+                        </div>
+                        <div class="card-body-custom">
+                            <form method="post" action="/Identity/Account/Register">
+                                @Html.AntiForgeryToken()
+                                <div class="form-floating mb-3">
+                                    <input type="email" name="Input.Email" class="form-control" id="regEmail" placeholder="email@shembull.com" required>
+                                    <label for="regEmail">Email Address</label>
                                 </div>
-                            </div>
+                                <div class="form-floating mb-3">
+                                    <input type="password" name="Input.Password" class="form-control" id="regPass" placeholder="••••••••" required>
+                                    <label for="regPass">Fjalëkalimi</label>
+                                </div>
+                                <div class="form-floating mb-4">
+                                    <input type="password" name="Input.ConfirmPassword" class="form-control" id="regConfirm" placeholder="••••••••" required>
+                                    <label for="regConfirm">Konfirmo Fjalëkalimin</label>
+                                </div>
+                                <button type="submit" class="btn btn-outline-premium w-100">
+                                    <span>REGJISTROHU TANI</span>
+                                    <i class="bi bi-stars ms-2"></i>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -71,91 +99,170 @@ else
 }
 
 <style>
-    .hero-section {
-        min-height: 80vh;
+    :root {
+        --primary-glow: rgba(0, 122, 255, 0.4);
+        --accent-glow: rgba(0, 242, 255, 0.3);
+        --glass-bg: rgba(18, 18, 30, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    body {
+        background-color: #050508;
+        overflow-x: hidden;
+    }
+
+    .auth-wrapper {
+        min-height: 90vh;
         position: relative;
+    }
+
+    .background-decorations {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
         overflow: hidden;
     }
 
-    .brand-badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 50px;
-        color: var(--primary);
-        font-weight: 700;
-        font-size: 0.75rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
+    .glow-sphere {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(120px);
+        opacity: 0.2;
+        animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .hero-title {
-        font-size: 4rem;
-        font-weight: 800;
-        line-height: 1.1;
-        letter-spacing: -2px;
-        color: #fff;
+    .sphere-1 {
+        width: 600px;
+        height: 600px;
+        background: #007aff;
+        top: -100px;
+        right: -100px;
     }
 
-    .gradient-text {
-        background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    .sphere-2 {
+        width: 500px;
+        height: 500px;
+        background: #5856d6;
+        bottom: -150px;
+        left: -100px;
+    }
+
+    @@keyframes float {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(50px, 50px); }
+    }
+
+    .fw-800 { font-weight: 800; }
+    .text-glow { text-shadow: 0 0 20px var(--primary-glow); }
+    .gradient-accent {
+        background: linear-gradient(135deg, #fff 0%, #007aff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    .hero-subtitle {
-        font-size: 1.25rem;
-        color: var(--text-muted);
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
+    .auth-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px);
+        border: 1px solid var(--glass-border);
+        border-radius: 32px;
+        padding: 40px;
+        height: 100%;
+        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
     }
 
-    .cta-btn {
-        padding: 1.2rem 2.5rem !important;
-        font-size: 1.1rem !important;
-        border-radius: 16px !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
+    .auth-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255,255,255,0.15);
     }
 
-    .shadow-glow {
-        box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
-    }
+    .login-variant:hover { box-shadow: 0 30px 60px rgba(0, 122, 255, 0.2); }
+    .register-variant:hover { box-shadow: 0 30px 60px rgba(88, 86, 214, 0.2); }
 
-    .btn-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .cta-btn:hover .btn-icon {
-        transform: translateX(5px);
-    }
-
-    .f-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .f-icon {
-        font-size: 1.5rem;
-    }
-
-    .f-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--text-muted);
+    .card-header-custom {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: #007aff;
+        margin-bottom: 30px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
     }
 
-    @@media (max-width: 768px) {
-        .hero-title {
-            font-size: 2.5rem;
-        }
+    .card-header-custom.accent-cyan { color: #5856d6; }
+
+    .form-floating .form-control {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 16px;
+    }
+
+    .form-floating label { color: rgba(255, 255, 255, 0.5); }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #007aff;
+        box-shadow: 0 0 15px rgba(0, 122, 255, 0.2);
+    }
+
+    .btn-primary-premium {
+        background: linear-gradient(135deg, #007aff, #00c6ff);
+        border: none;
+        padding: 18px;
+        border-radius: 18px;
+        font-weight: 700;
+        color: white;
+        box-shadow: 0 10px 25px rgba(0, 122, 255, 0.4);
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary-premium:hover {
+        transform: scale(1.02);
+        box-shadow: 0 15px 35px rgba(0, 122, 255, 0.5);
+    }
+
+    .btn-outline-premium {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 18px;
+        border-radius: 18px;
+        font-weight: 700;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-premium:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #5856d6;
+        color: white;
+    }
+
+    .auth-divider {
+        color: rgba(255, 255, 255, 0.2);
+        font-weight: 800;
+        position: relative;
+        font-size: 0.9rem;
+    }
+
+    .auth-divider::before, .auth-divider::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        width: 1px;
+        height: 100px;
+        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+    }
+
+    .auth-divider::before { top: -120px; }
+    .auth-divider::after { bottom: -120px; }
+
+    @@media (max-width: 991px) {
+        .auth-card { margin-bottom: 20px; }
+        .display-4 { font-size: 2.5rem; }
     }
 </style>

@@ -1,0 +1,59 @@
+@page
+@model SyriAI.Backend.Areas.Identity.Pages.Account.VerifyEmailModel
+@{
+    ViewData["Title"] = "Verifiko email-in";
+    ViewData["Subtitle"] = Html.Raw($"Shkruani kodin me 6 shifra që dërguam në <strong>{System.Net.WebUtility.HtmlEncode(Model.Email)}</strong>");
+    Layout = "_AuthLayout";
+}
+
+@if (!Model.CanSendEmail)
+{
+    <div class="alert alert-info">Mënyra e zhvillimit: dërgimi i email-it nuk është konfiguruar, prandaj kodi shfaqet në terminalin ku po punon serveri.</div>
+}
+
+<form method="post" asp-route-returnUrl="@Model.ReturnUrl">
+    <div asp-validation-summary="ModelOnly" class="validation-summary" style="@(ViewData.ModelState.IsValid ? "display:none" : "")"></div>
+    <input type="hidden" asp-for="Email" />
+
+    <div class="form-group">
+        <label for="Code">Kodi i verifikimit</label>
+        <input id="Code" name="Code" class="code-input" inputmode="numeric" autocomplete="one-time-code"
+               maxlength="6" pattern="[0-9]{6}" placeholder="••••••" required autofocus />
+        <p class="hint">Kodi vlen për @Model.ValidMinutes minuta. Kontrolloni edhe dosjen Spam.</p>
+    </div>
+
+    <button type="submit">Verifiko</button>
+</form>
+
+<form method="post" asp-page-handler="Resend" asp-route-returnUrl="@Model.ReturnUrl" class="resend-form">
+    <input type="hidden" asp-for="Email" />
+    Nuk ju erdhi kodi?
+    <button type="submit" class="link-button" id="resend-btn"
+            data-wait="@Model.ResendSeconds" @(Model.ResendSeconds > 0 ? "disabled" : "")>Dërgo kodin përsëri</button>
+</form>
+
+<div class="footer-links">
+    <a asp-page="./Login">Kthehu te kyçja</a>
+</div>
+
+@section Scripts {
+    <script>
+        // Countdown until a new code may be requested
+        (function () {
+            const btn = document.getElementById('resend-btn');
+            let wait = parseInt(btn.dataset.wait, 10) || 0;
+            const label = btn.textContent;
+            function tick() {
+                if (wait <= 0) { btn.disabled = false; btn.textContent = label; return; }
+                btn.disabled = true;
+                btn.textContent = `${label} (${wait} s)`;
+                wait--;
+                setTimeout(tick, 1000);
+            }
+            tick();
+            // Keep only digits in the code field (also when pasting "123 456")
+            const code = document.getElementById('Code');
+            code.addEventListener('input', () => { code.value = code.value.replace(/\D/g, '').slice(0, 6); });
+        })();
+    </script>
+}
