@@ -22,6 +22,8 @@ obj/
 node_modules/
 .vite/
 dist/
+# ...but keep the front-end libraries the ASP.NET pages load (Bootstrap, jQuery)
+!SyriAI.Backend/wwwroot/lib/*/dist/
 
 # Env & Logs
 *.log
