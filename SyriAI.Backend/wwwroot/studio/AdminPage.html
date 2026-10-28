@@ -8,7 +8,7 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=1"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -154,6 +154,8 @@
                     <button class="ink-btn ink-btn--danger" data-ink="clear" title="Fshi shkrimet" aria-label="Fshi shkrimet"><svg class="icon"><use href="#i-trash" /></svg></button>
                 </div>
             </div>
+            <!-- 👍 reactions from the thumbs-up gesture (js/admin/camera.js) -->
+            <div id="admin-reactions" class="admin-reactions" aria-hidden="true"></div>
             <!-- 3-2-1 countdown before going live -->
             <div id="countdown-overlay" class="countdown-overlay" hidden><span></span></div>
         </section>
@@ -346,7 +348,7 @@
     <script src="js/admin/library.js?v=4"></script>
     <script src="js/admin/settings.js?v=4"></script>
     <script src="js/admin/ink.js?v=10"></script>
-    <script src="js/admin/camera.js?v=13"></script>
+    <script src="js/admin/camera.js?v=14"></script>
     <script src="js/admin/recording.js?v=4"></script>
     <script src="js/admin/graphics.js?v=4"></script>
     <script src="js/admin/main.js?v=8"></script>

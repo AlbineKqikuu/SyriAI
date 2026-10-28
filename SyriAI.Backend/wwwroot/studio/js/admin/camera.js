@@ -161,7 +161,28 @@ function rawPose(lm) {
     if (index && middle && ring && pinky) return 'palm';
     if (index && !middle) return 'write';
     if (index) return 'point';
+    // Thumbs up: all fingers folded, thumb pointing up
+    if (!middle && !ring && !pinky && lm[4].y < lm[3].y && lm[3].y < lm[2].y && lm[4].y < lm[5].y - 0.06) return 'thumbs';
     return 'other';
+}
+
+// 👍 reaction (same as the Board page): emojis float up over the prompter
+const reactionsLayer = document.getElementById('admin-reactions');
+let lastReaction = 0;
+
+function showReaction(emoji) {
+    for (let i = 0; i < 7; i++) {
+        const el = document.createElement('span');
+        el.className = 'fx-float';
+        el.textContent = emoji;
+        el.style.left = `${10 + Math.random() * 80}%`;
+        el.style.animationDelay = `${i * 90}ms`;
+        el.style.fontSize = `${34 + Math.random() * 30}px`;
+        el.style.setProperty('--dx', `${(Math.random() - 0.5) * 160}px`);
+        el.style.setProperty('--rise', `${reactionsLayer.clientHeight * (0.6 + Math.random() * 0.4)}px`);
+        el.addEventListener('animationend', () => el.remove());
+        reactionsLayer.appendChild(el);
+    }
 }
 
 /** Change pose only after it is seen on consecutive frames (leaving 'write' needs 3) */
@@ -213,6 +234,11 @@ function onHandResults(results) {
         const isIndexExtended = pose === 'write' || pose === 'point';
         const isMiddleExtended = pose === 'point';
         const [nx, ny] = smoothFingertip(landmarks[8]);
+
+        if (pose === 'thumbs' && performance.now() - lastReaction > 1800) {
+            lastReaction = performance.now();
+            showReaction('👍');
+        }
 
         // Writing: index finger only, hand writing on and not the spotlight tool
         const isWriting = isDrawMode && !AdminInk.spotlight && isIndexExtended && !isMiddleExtended;

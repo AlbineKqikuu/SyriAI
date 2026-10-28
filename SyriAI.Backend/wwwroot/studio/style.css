@@ -2421,3 +2421,27 @@ body.prompter-light .scroll-container {
 .studio-btn[data-tool="spotlight"].active .icon {
     color: #fbbf24;
 }
+
+/* 👍 reactions floating over the prompter (thumbs-up gesture, js/admin/camera.js) */
+.admin-reactions {
+    position: absolute;
+    inset: 0;
+    z-index: 5150;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.fx-float {
+    position: absolute;
+    bottom: -60px;
+    font-size: 46px;
+    line-height: 1;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+    animation: fxFloatUp 2.6s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes fxFloatUp {
+    0% { transform: translate(0, 0) scale(0.4) rotate(0); opacity: 0; }
+    12% { opacity: 1; transform: translate(0, -60px) scale(1.15) rotate(-6deg); }
+    100% { transform: translate(var(--dx), calc(-1 * var(--rise))) scale(0.9) rotate(10deg); opacity: 0; }
+}
