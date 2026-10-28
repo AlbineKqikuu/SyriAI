@@ -1,0 +1,27 @@
+# Render blueprint for SyriAI Studio (see docs/DEPLOY.md).
+# Values marked sync: false are asked for in the Render dashboard and never stored in git.
+services:
+  - type: web
+    name: syriai
+    runtime: docker
+    rootDir: SyriAI.Backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /Identity/Account/Login
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: SeedAdmin__Email
+        sync: false
+      - key: SeedAdmin__Password
+        sync: false
+      - key: Smtp__Host
+        value: smtp.gmail.com
+      - key: Smtp__Port
+        value: "587"
+      - key: Smtp__User
+        sync: false
+      - key: Smtp__FromEmail
+        sync: false
+      - key: Smtp__Password
+        sync: false

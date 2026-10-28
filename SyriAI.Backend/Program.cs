@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -107,6 +109,19 @@ builder.Services.AddSignalR(options => options.MaximumReceiveMessageSize = 8 * 1
 
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MediaService.MaxMediaBytes + 1024 * 1024);
 
+// ---------- Hosting (Railway or any server behind a proxy), see docs/DEPLOY.md ----------
+// Login cookies are encrypted with keys kept in App_Data, so logins survive a restart or
+// redeploy (App_Data is a persistent volume in the cloud, like the uploaded media).
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")));
+// The proxy terminates HTTPS; trust its X-Forwarded-* headers so the app knows the real scheme
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -141,6 +156,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();

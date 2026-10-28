@@ -141,7 +141,7 @@ SyriAI.Backend/
 tests/                       matcher unit tests
 tools/                       evaluate-matcher.js, legacy-matcher.js, analyze-study.js,
                              lib/ (statistics, SVG charts), results/
-docs/                        ARCHITECTURE.md, DATABASE.md, EVALUATION.md, YOUTUBE-LIVE.md, EMAIL.md
+docs/                        ARCHITECTURE.md, DATABASE.md, DEPLOY.md, EVALUATION.md, YOUTUBE-LIVE.md, EMAIL.md
 ```
 
 ## Technologies
