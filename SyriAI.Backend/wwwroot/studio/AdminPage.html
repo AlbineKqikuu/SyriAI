@@ -8,7 +8,7 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=2"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -116,7 +116,11 @@
                 <div class="stat"><span class="label">Shpejtësia</span><span><span id="stat-wpm">0</span> <small>WPM</small></span></div>
                 <div class="stat"><span class="label">Koha e mbetur</span><span id="stat-time">0:00</span></div>
                 <div class="stat"><span class="label">Saktësia</span><span id="stat-acc">0%</span></div>
+                <div class="stat stat--timing"><span class="label" id="stat-segment-label">Lajmi</span><span id="stat-segment">—</span></div>
+                <div class="stat stat--timing"><span class="label" id="stat-plan-label">Shfaqja</span><span id="stat-plan">—</span></div>
             </div>
+            <!-- Speech tracker lost the reader (off-script) / found them again -->
+            <div id="tracking-lost" class="tracking-lost" role="status" hidden></div>
             <div class="scroll-container" id="scroll-container">
                 <div id="script-display">Shkruani ose ngarkoni skriptin në panelin djathtas, pastaj shtypni “Fillo LIVE”.</div>
             </div>
@@ -204,6 +208,38 @@
                         <input type="text" id="study-notes" class="text-input" placeholder="Shënime (opsionale)" aria-label="Shënime">
                     </div>
                 </details>
+            </section>
+
+            <!-- Rundown: the stories of the show ("## Title | 1:30" lines in the script), js/admin/show.js -->
+            <section class="panel">
+                <div class="panel-head">
+                    <h2 class="panel-title">Rendi i lajmeve</h2>
+                    <span id="rundown-total" class="muted panel-head-meta"></span>
+                </div>
+                <ol id="rundown-list" class="rundown-list"></ol>
+                <p id="rundown-hint" class="rundown-hint">Ndajeni shfaqjen në lajme: shtoni në skript rreshta si <code>## Politika | 1:30</code> (titulli dhe kohëzgjatja e planifikuar).</p>
+                <div class="btn-row">
+                    <button id="rundown-next-btn" class="btn btn-secondary" title="Lajmi tjetër (Shift + →, ose thoni “lajmi tjetër”)">
+                        <svg class="icon"><use href="#i-scroll" /></svg><span class="btn-label">Lajmi tjetër</span>
+                    </button>
+                    <button id="rundown-add-btn" class="btn btn-secondary btn-icon-only" title="Shto një lajm në skript, te kursori" aria-label="Shto lajm">
+                        <svg class="icon"><use href="#i-plus" /></svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Producer → presenter messages, js/admin/show.js -->
+            <section class="panel">
+                <h2 class="panel-title">Mesazh për prezantuesin</h2>
+                <div id="cue-quick" class="cue-quick"></div>
+                <div class="cue-row">
+                    <input type="text" id="cue-input" class="text-input" maxlength="120" placeholder="Shkruani mesazhin… (Enter)" aria-label="Mesazhi për prezantuesin">
+                    <button id="cue-send-btn" class="btn btn-secondary btn-sm">Dërgo</button>
+                </div>
+                <div class="cue-status-row">
+                    <span id="cue-status" class="cue-status" role="status"></span>
+                    <button id="cue-clear-btn" class="btn btn-ghost btn-sm" hidden>Fshih</button>
+                </div>
             </section>
 
             <!-- 2. Script -->
@@ -306,8 +342,9 @@
             <div class="shortcut-hints">
                 <span><kbd>←</kbd><kbd>→</kbd> fjala / faqja</span>
                 <span><kbd>Space</kbd> vazhdo</span>
+                <span><kbd>Shift</kbd><kbd>→</kbd> lajmi tjetër</span>
                 <span><kbd>Ctrl</kbd><kbd>S</kbd> ruaj skriptin</span>
-                <span>Komandë zëri: “fillo prompter” / “stop prompter”</span>
+                <span>Komandë zëri: “fillo prompter” / “stop prompter” / “lajmi tjetër”</span>
             </div>
         </aside>
     </main>
@@ -338,21 +375,23 @@
 
     <!-- Shared (admin + client) -->
     <script src="js/shared/sync.js?v=4"></script>
-    <script src="js/shared/matcher.js?v=4"></script>
+    <script src="js/shared/matcher.js?v=5"></script>
+    <script src="js/shared/rundown.js?v=1"></script>
     <script src="js/shared/documents.js?v=4"></script>
     <!-- Admin studio (plain scripts sharing one scope; order matters) -->
-    <script src="js/admin/core.js?v=6"></script>
-    <script src="js/admin/prompter.js?v=4"></script>
+    <script src="js/admin/core.js?v=7"></script>
+    <script src="js/admin/prompter.js?v=5"></script>
     <script src="js/admin/documents.js?v=6"></script>
-    <script src="js/admin/session.js?v=4"></script>
+    <script src="js/admin/session.js?v=5"></script>
+    <script src="js/admin/show.js?v=1"></script>
     <script src="js/admin/library.js?v=4"></script>
-    <script src="js/admin/settings.js?v=4"></script>
+    <script src="js/admin/settings.js?v=5"></script>
     <script src="js/shared/ink-render.js?v=1"></script>
     <script src="js/admin/ink.js?v=11"></script>
     <script src="js/admin/camera.js?v=16"></script>
     <script src="js/admin/recording.js?v=4"></script>
     <script src="js/admin/graphics.js?v=4"></script>
-    <script src="js/admin/main.js?v=9"></script>
+    <script src="js/admin/main.js?v=10"></script>
 </body>
 
 </html>

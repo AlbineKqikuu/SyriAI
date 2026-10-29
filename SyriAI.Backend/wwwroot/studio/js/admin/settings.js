@@ -65,6 +65,7 @@ const StudioSettings = (() => {
 
         if (recognition) recognition.lang = s.speechLang;
         renderTicker();
+        LiveShow.refresh(); // planned times depend on targetWpm
 
         broadcastUpdate('settings_sync', clientSettings());
     }
@@ -135,6 +136,11 @@ const StudioSettings = (() => {
                 </div>
             </div>
             <div class="form-field">
+                <label class="field-label" for="set-wpm">Shpejtësia e planifikuar e leximit (fjalë në minutë)</label>
+                <input type="number" id="set-wpm" class="text-input" min="60" max="300" step="5" inputmode="numeric">
+                <p class="muted">Përdoret për lajmet pa kohëzgjatje të shkruar (<code>## Titulli | 1:30</code>) dhe në fillim të leximit.</p>
+            </div>
+            <div class="form-field">
                 <label class="field-label" for="set-layout">Dokumentet në transmetimin YouTube</label>
                 <select id="set-layout" class="text-input">
                     <option value="split">Ekran i ndarë — kamera majtas, dokumenti djathtas</option>
@@ -154,6 +160,7 @@ const StudioSettings = (() => {
         form.querySelector('#set-countdown').value = String(s.countdownSeconds);
         form.querySelector('#set-lang').value = s.speechLang;
         form.querySelector('#set-layout').value = s.broadcastLayout;
+        form.querySelector('#set-wpm').value = String(s.targetWpm);
         form.querySelector('#set-ticker').value = s.ticker.join('\n');
         form.querySelector('#set-sponsors').value = s.sponsors.join('\n');
 
@@ -180,6 +187,7 @@ const StudioSettings = (() => {
                             countdownSeconds: parseInt(form.querySelector('#set-countdown').value, 10),
                             speechLang: form.querySelector('#set-lang').value,
                             broadcastLayout: form.querySelector('#set-layout').value,
+                            targetWpm: Math.min(300, Math.max(60, parseInt(form.querySelector('#set-wpm').value, 10) || DEFAULT_SETTINGS.targetWpm)),
                             ticker: ticker.length ? ticker : DEFAULT_SETTINGS.ticker,
                             sponsors: sponsors.length ? sponsors : DEFAULT_SETTINGS.sponsors,
                         });

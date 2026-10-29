@@ -50,6 +50,7 @@ public `https://` link.
 ### Limits of the free plans
 
 - The app sleeps after ~15 minutes without visitors; the next visit takes about a minute.
-- The free web service has no persistent disk: uploaded media and the login-cookie keys
-  (`App_Data`) are reset when the app restarts, so users sign in again and re-upload files.
-  A paid instance with a disk mounted on `/app/App_Data` keeps them.
+- The free web service has no persistent disk: uploaded media (`App_Data`) is reset when the
+  app restarts, so files must be uploaded again. A paid instance with a disk mounted on
+  `/app/App_Data` keeps them. The login-cookie and form-token keys are stored in the database
+  (table `DataProtectionKeys`), so logins and open forms survive a restart or redeploy.

@@ -31,6 +31,7 @@ function applyRemoteScroll(container, top) {
 /** Send the complete current studio state to a client screen that just connected */
 function sendFullState() {
     broadcastUpdate('live_state', liveStatePayload());
+    LiveShow.syncScreen(); // story timing, producer message, lost-place badge
     AdminInk.syncScreens(); // the drawing so far
     broadcastUpdate('headline_sync', headlineState());
     broadcastUpdate('settings_sync', StudioSettings.clientSettings());
@@ -68,6 +69,16 @@ studioSync.on((type, data) => {
             break;
         case 'nav_prev':
             navigate(-1);
+            break;
+        case 'nav_next_segment':
+            LiveShow.step(1);
+            break;
+        case 'nav_prev_segment':
+            LiveShow.step(-1);
+            break;
+        case 'cue_shown':
+        case 'cue_ack':
+            LiveShow.onCueReply(type, data);
             break;
         case 'pdf_scroll':
             applyRemoteScroll(pdfViewMain, data);

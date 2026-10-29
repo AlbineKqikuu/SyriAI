@@ -8,7 +8,7 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=2"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=13">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -148,6 +148,17 @@
             font-size: 0.85rem;
             font-weight: 800;
             letter-spacing: 1.5px;
+        }
+
+        /* Not on air: grey pill, no pulse (body.on-air is set by the studio's LIVE state) */
+        body:not(.on-air) .live-pill {
+            background: rgba(255, 255, 255, 0.14);
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        body:not(.on-air) .live-pill .live-dot {
+            animation: none;
+            opacity: 0.5;
         }
 
         .live-pill .live-dot {
@@ -326,7 +337,7 @@
     <!-- Top Header Banner (Full Width, Dark Blue) -->
     <div class="client-header-banner">
         <div class="client-header-logo">
-            <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+            <span class="live-pill" id="live-pill"><span class="live-dot"></span><span id="live-pill-text">NË PRITJE</span></span>
             <span class="brand">Syri<span>AI</span></span>
             <small class="brand-tag">STUDIO</small>
         </div>
@@ -349,6 +360,19 @@
                 <!-- Main Content Area (Script or PDF) -->
                 <div class="client-main-viewport">
                     <div id="reading-marker" class="reading-marker"></div>
+                    <!-- Story and back-timing from the studio rundown -->
+                    <div id="client-timing" class="client-timing" hidden>
+                        <span class="ct-story" id="ct-story"></span>
+                        <span><span class="ct-label">Lajmi</span><span class="ct-value" id="ct-segment"></span></span>
+                        <span><span class="ct-label">Plani</span><span class="ct-value" id="ct-plan"></span></span>
+                        <span class="ct-next" id="ct-next"></span>
+                    </div>
+                    <div id="tracking-lost" class="tracking-lost" role="status" hidden></div>
+                    <!-- Message from the producer (studio) -->
+                    <div id="producer-cue" class="producer-cue" role="alert" hidden>
+                        <span class="cue-text" id="cue-text"></span>
+                        <span class="cue-hint">Kliko ose shtyp Enter për të konfirmuar</span>
+                    </div>
                     <div class="client-scroll-container" id="client-scroll-box">
                         <div id="client-script-display">Pret skriptin nga Admin...</div>
                     </div>
@@ -422,7 +446,8 @@
     <script src="js/shared/documents.js?v=4"></script>
     <script src="js/shared/ink-render.js?v=1"></script>
     <script src="js/shared/ink-receiver.js?v=1"></script>
-    <script src="client.js?v=7"></script>
+    <script src="js/shared/rundown.js?v=1"></script>
+    <script src="client.js?v=8"></script>
 </body>
 
 </html>

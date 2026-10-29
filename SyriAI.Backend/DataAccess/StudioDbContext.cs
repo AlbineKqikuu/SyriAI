@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SyriAI.Backend.Entities;
 
@@ -7,8 +8,10 @@ namespace SyriAI.Backend.DataAccess;
 /// Studio data (scripts, sessions, settings, media). Lives in the same MySQL database as
 /// Identity but has its own migrations history, so it can evolve independently of the
 /// login tables in <see cref="ApplicationDbContext"/>.
+/// It also keeps the ASP.NET Core data-protection keys, so login cookies and form tokens stay
+/// valid after a redeploy (the cloud container has no persistent disk).
 /// </summary>
-public class StudioDbContext : DbContext
+public class StudioDbContext : DbContext, IDataProtectionKeyContext
 {
     public const string MigrationsHistoryTable = "__StudioMigrationsHistory";
 
@@ -20,6 +23,7 @@ public class StudioDbContext : DbContext
     public DbSet<StudioSession> Sessions => Set<StudioSession>();
     public DbSet<UserSettings> Settings => Set<UserSettings>();
     public DbSet<MediaAsset> Media => Set<MediaAsset>();
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

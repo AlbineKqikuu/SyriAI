@@ -8,6 +8,8 @@
 //   3. score candidates: exact > near (edit distance) > prefix, plus a bonus for each
 //      preceding spoken word that also lines up with the script ("context")
 //   4. short, very common words (e, në, të…) only count when context confirms them
+//   5. recovery: after several new words without a match (the reader skipped ahead, went
+//      back or improvised), search the whole script for the last few spoken words in a row
 (function (root, factory) {
     const api = factory();
     if (typeof module === 'object' && module.exports) module.exports = api;
@@ -20,6 +22,8 @@
         contextWords: 2,     // how many preceding words to use as context
         minWordLength: 3,    // shorter words need context to be matched
         maxPrefixJump: 5,    // weak (prefix-only) guesses further ahead than this are ignored
+        resyncAfter: 3,      // updates without a match before searching the whole script (0 = off)
+        resyncWords: 3,      // spoken words that must line up in a row to jump there
     };
 
     /** Lowercase, remove diacritics and punctuation: "Prishtinë," → "prishtine" */
@@ -117,22 +121,60 @@
     }
 
     /**
+     * Search the whole script for the last `resyncWords` spoken words in a row, to find a
+     * reader who left the look-ahead window. At least one of the words must be long enough
+     * to mean something (three common short words in a row are not evidence).
+     * Prefers the place nearest to the current position, forward over backward.
+     * @returns {{index:number} | null}
+     */
+    function findResync(scriptWords, fromIndex, spokenWords, options = {}) {
+        const opts = { ...DEFAULTS, ...options };
+        const n = opts.resyncWords;
+        if (n < 1 || spokenWords.length < n) return null;
+        const tail = spokenWords.slice(-n);
+        if (!tail.some(w => w.length >= opts.minWordLength + 1)) return null;
+
+        let best = null;
+        for (let i = n - 1; i < scriptWords.length; i++) {
+            let lined = true;
+            for (let k = 0; k < n && lined; k++) {
+                lined = wordScore(scriptWords[i - k], tail[n - 1 - k]) >= 0.8;
+            }
+            if (!lined) continue;
+            const distance = i >= fromIndex ? i - fromIndex : (fromIndex - i) * 2;
+            if (!best || distance < best.distance) best = { index: i, distance };
+        }
+        return best && { index: best.index };
+    }
+
+    /**
      * Stateful tracker for one script. Feed it every recognition transcript;
      * it ignores repeated interim updates that bring no new word.
      */
     function createTracker(scriptWords, options = {}) {
         const words = scriptWords.map(normalizeWord);
+        const opts = { ...DEFAULTS, ...options };
         let position = 0;
         let lastKey = null;
+        let misses = 0;
+        let recoveries = 0;
+        let recovered = false;
 
         return {
             get position() { return position; },
             get length() { return words.length; },
+            /** True while several new words in a row did not match (the reader is off-script) */
+            get lost() { return opts.resyncAfter > 0 && misses >= opts.resyncAfter; },
+            /** Times the reader was found again through the whole-script search */
+            get recoveries() { return recoveries; },
+            /** True when the last matched index came from the whole-script search */
+            get recovered() { return recovered; },
 
             /** Move the expected position (e.g. after keyboard navigation) */
             setPosition(index) {
                 position = Math.max(0, Math.min(words.length, index));
                 lastKey = null;
+                misses = 0;
             },
 
             /**
@@ -147,14 +189,30 @@
                 const key = spoken.length + '|' + spoken[spoken.length - 1];
                 if (key === lastKey) return null;
                 lastKey = key;
+                recovered = false;
 
-                const match = findMatch(words, position, spoken, options);
-                if (!match) return -1;
-                position = match.index + 1;
-                return match.index;
+                const match = findMatch(words, position, spoken, opts);
+                if (match) {
+                    misses = 0;
+                    position = match.index + 1;
+                    return match.index;
+                }
+
+                misses++;
+                if (opts.resyncAfter > 0 && misses >= opts.resyncAfter) {
+                    const found = findResync(words, position, spoken, opts);
+                    if (found) {
+                        misses = 0;
+                        recoveries++;
+                        recovered = true;
+                        position = found.index + 1;
+                        return found.index;
+                    }
+                }
+                return -1;
             },
         };
     }
 
-    return { DEFAULTS, normalizeWord, tokenize, editDistance, wordScore, findMatch, createTracker };
+    return { DEFAULTS, normalizeWord, tokenize, editDistance, wordScore, findMatch, findResync, createTracker };
 });

@@ -167,7 +167,7 @@ header {
     top: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    width: min(90%, 460px);
+    width: min(94%, 680px);
     padding: 0.6rem 1.25rem;
     background: rgba(14, 14, 21, 0.85);
     backdrop-filter: blur(10px);
@@ -1850,6 +1850,11 @@ body.prompter-light .scroll-container {
     gap: 0.75rem;
 }
 
+/* The body scrolls as a whole; its parts (tables, charts) keep their natural height */
+.modal-body > * {
+    flex-shrink: 0;
+}
+
 .modal-footer {
     display: flex;
     flex-wrap: wrap;
@@ -2444,4 +2449,366 @@ body.prompter-light .scroll-container {
     0% { transform: translate(0, 0) scale(0.4) rotate(0); opacity: 0; }
     12% { opacity: 1; transform: translate(0, -60px) scale(1.15) rotate(-6deg); }
     100% { transform: translate(var(--dx), calc(-1 * var(--rise))) scale(0.9) rotate(10deg); opacity: 0; }
+}
+
+/* ---------- Live show tools (js/admin/show.js, client.js) ---------- */
+
+/* Timing stats: green while on time, red when over */
+.stat--timing span[data-state="ok"] { color: var(--success-color); }
+.stat--timing span[data-state="over"] { color: var(--danger-color); }
+
+/* Story headings inside the prompter text */
+.segment-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin: 1.2em 0 0.5em;
+    padding-top: 0.6em;
+    border-top: 2px solid var(--border-strong);
+    font-size: 0.45em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+}
+
+/* Leave room for the timing strip when a story heading is scrolled to the top */
+.segment-heading {
+    scroll-margin-top: 4.5rem;
+}
+
+.segment-heading:first-child {
+    margin-top: 0;
+}
+
+.segment-num {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.8em;
+    height: 1.8em;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: #fff;
+    font-size: 0.8em;
+}
+
+/* Rundown panel */
+.panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.panel-head-meta {
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.rundown-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.rundown-list:empty {
+    display: none;
+}
+
+.rundown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+}
+
+.rundown-item.is-current {
+    border-color: var(--accent-color);
+    background: rgba(0, 122, 255, 0.12);
+}
+
+.rundown-item.is-done .rundown-title {
+    color: var(--text-muted);
+}
+
+.rundown-item.is-skipped .rundown-title {
+    color: var(--text-subtle);
+    text-decoration: line-through;
+}
+
+.rundown-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.55rem;
+    background: none;
+    border: 0;
+    color: var(--text-color);
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rundown-num {
+    flex-shrink: 0;
+    width: 1.4rem;
+    color: var(--text-subtle);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.rundown-item.is-current .rundown-num {
+    color: var(--accent-color);
+}
+
+.rundown-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.rundown-time {
+    flex-shrink: 0;
+    display: flex;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.rundown-actual {
+    color: var(--text-color);
+}
+
+.rundown-actual::after {
+    content: ' /';
+    color: var(--text-subtle);
+}
+
+.rundown-hint {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.rundown-hint code {
+    font-family: var(--font-mono);
+    color: var(--text-color);
+    background: var(--surface-3);
+    padding: 0.05rem 0.3rem;
+    border-radius: 4px;
+}
+
+/* Producer messages */
+.cue-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.chip-btn {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chip-btn:hover {
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.cue-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.cue-row .text-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.cue-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.cue-status-row:has(.cue-status:empty) {
+    display: none;
+}
+
+.cue-status {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.cue-status[data-state="shown"] { color: var(--warning-color); }
+.cue-status[data-state="ack"] { color: var(--success-color); }
+
+/* "Lost place" badge over the prompter */
+.tracking-lost {
+    position: absolute;
+    top: 5.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 520;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    pointer-events: none;
+    background: rgba(255, 159, 10, 0.18);
+    border: 1px solid var(--warning-color);
+    color: var(--warning-color);
+    animation: lostPulse 1.4s ease-in-out infinite;
+}
+
+.tracking-lost[data-state="found"] {
+    background: rgba(52, 199, 89, 0.18);
+    border-color: var(--success-color);
+    color: var(--success-color);
+    animation: none;
+}
+
+.tracking-lost[hidden] {
+    display: none;
+}
+
+@keyframes lostPulse {
+    50% { opacity: 0.55; }
+}
+
+/* Presenter screen: ON AIR state, timing strip and producer message */
+.client-timing {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    max-width: 94%;
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius);
+    background: rgba(14, 14, 21, 0.88);
+    border: 1px solid var(--border-strong);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.client-timing[hidden] {
+    display: none;
+}
+
+.client-timing .ct-story {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.client-timing .ct-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.client-timing .ct-label {
+    color: var(--text-muted);
+    font-size: 0.75em;
+    margin-right: 0.35em;
+}
+
+.client-timing [data-state="ok"] { color: var(--success-color); }
+.client-timing [data-state="over"] { color: var(--danger-color); }
+
+.client-timing .ct-next {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.producer-cue {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    transform: translateX(-50%);
+    z-index: 5200;
+    width: min(90%, 900px);
+    padding: 1.4rem 2rem;
+    border-radius: var(--radius-lg);
+    background: #ffcc00;
+    color: #111;
+    text-align: center;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    animation: cueIn 0.25s var(--ease);
+}
+
+.producer-cue[hidden] {
+    display: none;
+}
+
+.producer-cue .cue-text {
+    display: block;
+    font-size: clamp(1.6rem, 3.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.producer-cue .cue-hint {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+@keyframes cueIn {
+    from { opacity: 0; transform: translate(-50%, -12px); }
+}
+
+/* Tally: red frame around the prompter while LIVE */
+body.on-air .client-content-frame {
+    box-shadow: inset 0 0 0 4px var(--danger-color);
+}
+
+/* Session report: per-story table and pace chart */
+.report-chart .series--pace {
+    stroke: var(--warning-color);
+}
+
+.report-chart .avg {
+    stroke: var(--warning-color);
+    stroke-dasharray: 2 4;
+    opacity: 0.6;
+}
+
+.data-table .is-over { color: var(--danger-color); }
+.data-table .is-under { color: var(--success-color); }
+
+.data-table .row-actions {
+    display: flex;
+    gap: 0.3rem;
+    white-space: nowrap;
 }

@@ -251,6 +251,72 @@ function applyRemoteScroll(container, top) {
 // The studio's writing, spotlight, sparkles and reactions, drawn exactly as in the studio
 const inkReceiver = new StudioInkReceiver(drawGlass.parentElement);
 
+// --- Live show: ON AIR, story timing, producer messages ---
+const timingStrip = document.getElementById('client-timing');
+const lostBadge = document.getElementById('tracking-lost');
+const cueBox = document.getElementById('producer-cue');
+const CUE_VISIBLE_MS = 12000;
+let cueId = null;
+let cueTimer = null;
+let foundTimer = null;
+
+function showLiveState({ live, ended }) {
+    document.body.classList.toggle('on-air', !!live);
+    document.getElementById('live-pill-text').textContent = live ? 'LIVE' : ended ? 'PËRFUNDOI' : 'NË PRITJE';
+}
+
+function showTiming(t) {
+    timingStrip.hidden = !t;
+    if (!t) return;
+    const fmt = (s) => SyriRundown.formatDelta(s).replace(/^[+-]/, '');
+    const segment = document.getElementById('ct-segment');
+    segment.textContent = (t.segmentLeft < 0 ? '+' : '') + fmt(t.segmentLeft);
+    segment.dataset.state = t.segmentLeft < 0 ? 'over' : 'ok';
+    const plan = document.getElementById('ct-plan');
+    plan.textContent = SyriRundown.formatDelta(t.delta);
+    plan.dataset.state = t.delta > 0 ? 'over' : 'ok';
+    document.getElementById('ct-story').textContent = t.title ? `${t.index + 1}/${t.count} · ${t.title}` : '';
+    document.getElementById('ct-next').textContent = t.next ? `Tjetër: ${t.next}` : '';
+}
+
+function showTrackingState({ lost, found }) {
+    clearTimeout(foundTimer);
+    if (found) {
+        lostBadge.hidden = false;
+        lostBadge.dataset.state = 'found';
+        lostBadge.textContent = '✓ Vendi u gjet';
+        foundTimer = setTimeout(() => { lostBadge.hidden = true; }, 1500);
+        return;
+    }
+    lostBadge.hidden = !lost;
+    lostBadge.dataset.state = 'lost';
+    lostBadge.textContent = 'Duke kërkuar vendin në skript…';
+}
+
+function showCue(cue) {
+    clearTimeout(cueTimer);
+    if (!cue || !cue.text) {
+        cueBox.hidden = true;
+        cueId = null;
+        return;
+    }
+    cueId = cue.id;
+    document.getElementById('cue-text').textContent = cue.text;
+    cueBox.hidden = false;
+    studioSync.send('cue_shown', { id: cue.id });
+    cueTimer = setTimeout(() => { cueBox.hidden = true; }, CUE_VISIBLE_MS);
+}
+
+function acknowledgeCue() {
+    if (cueBox.hidden || cueId === null) return false;
+    studioSync.send('cue_ack', { id: cueId });
+    clearTimeout(cueTimer);
+    cueBox.hidden = true;
+    return true;
+}
+
+cueBox.addEventListener('click', acknowledgeCue);
+
 // --- Messages from the admin studio ---
 studioSync.on((type, data) => {
     inkReceiver.handle(type, data);
@@ -310,6 +376,21 @@ studioSync.on((type, data) => {
         case 'cursor_pos':
             drawAdminCursor(data);
             break;
+        case 'live_state':
+            showLiveState(data);
+            break;
+        case 'show_timing':
+            showTiming(data);
+            break;
+        case 'tracking_state':
+            showTrackingState(data);
+            break;
+        case 'producer_cue':
+            showCue(data);
+            break;
+        case 'segment_jump':
+            document.getElementById(`segment-${data}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            break;
         case 'countdown':
             countdownOverlay.hidden = data <= 0;
             countdownOverlay.querySelector('span').textContent = data;
@@ -352,7 +433,13 @@ window.addEventListener('keydown', (e) => {
     const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' '];
     const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp'];
 
-    if (nextKeys.includes(e.key)) {
+    if ((e.key === 'Enter' || e.key === 'Escape') && acknowledgeCue()) {
+        e.preventDefault();
+    } else if (e.shiftKey && (nextKeys.includes(e.key) || prevKeys.includes(e.key))) {
+        // Shift + arrow: next / previous story of the rundown
+        e.preventDefault();
+        studioSync.send(nextKeys.includes(e.key) ? 'nav_next_segment' : 'nav_prev_segment');
+    } else if (nextKeys.includes(e.key)) {
         e.preventDefault();
         studioSync.send('nav_next');
     } else if (prevKeys.includes(e.key)) {

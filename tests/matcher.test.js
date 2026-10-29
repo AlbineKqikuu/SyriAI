@@ -86,3 +86,48 @@ test('legacy matcher fails on missing diacritics in short words where the new on
     assert.equal(legacy.update("sot moti eshte"), -1); // "eshte" not found
     assert.equal(current.update('sot moti eshte'), 2);
 });
+
+// A script longer than the look-ahead window (25 words), so a skip cannot be found the normal way
+const LONG_SCRIPT = words(
+    'Mirëmbrëma të nderuar shikues sot qeveria miratoi buxhetin për vitin e ardhshëm pas një debati ' +
+    'të gjatë në parlament ku opozita kërkoi më shumë para për shëndetësinë dhe arsimin ndërsa ' +
+    'ministri i financave tha se deficiti do të mbetet nën tre përqind në sport ekipi kombëtar ' +
+    'fitoi ndeshjen miqësore kundër Maltës me rezultat dy me zero falë golave të Muriqit');
+
+test('tracker finds a reader who skipped far ahead after a few misses', () => {
+    const tracker = M.createTracker(LONG_SCRIPT);
+    assert.equal(tracker.update('mirembrema te nderuar'), 2);
+    // Jumps to the sport story, ~40 words ahead (outside the look-ahead window)
+    assert.equal(tracker.update('mirembrema te nderuar ekipi'), -1);
+    assert.equal(tracker.update('mirembrema te nderuar ekipi kombetar'), -1);
+    assert.equal(tracker.lost, false);
+    const index = tracker.update('mirembrema te nderuar ekipi kombetar fitoi');
+    assert.equal(LONG_SCRIPT[index], 'fitoi');
+    assert.equal(tracker.recovered, true);
+    assert.equal(tracker.recoveries, 1);
+    assert.equal(tracker.lost, false);
+    // Normal tracking continues from there
+    assert.equal(LONG_SCRIPT[tracker.update('ekipi kombetar fitoi ndeshjen')], 'ndeshjen');
+    assert.equal(tracker.recovered, false);
+});
+
+test('tracker reports "lost" while the reader improvises', () => {
+    const tracker = M.createTracker(LONG_SCRIPT);
+    tracker.update('mirembrema te nderuar');
+    tracker.update('mirembrema te nderuar une');
+    tracker.update('mirembrema te nderuar une dua');
+    assert.equal(tracker.update('mirembrema te nderuar une dua thjesht'), -1);
+    assert.equal(tracker.lost, true);
+    assert.equal(tracker.recoveries, 0);
+    // Back on script: the normal window finds it and "lost" clears
+    assert.equal(LONG_SCRIPT[tracker.update('sot qeveria')], 'qeveria');
+    assert.equal(tracker.lost, false);
+});
+
+test('findResync needs one meaningful word and prefers the nearest place, forward first', () => {
+    const script = M.tokenize('a b c dita e mire x y z dita e mire');
+    assert.equal(M.findResync(script, 0, M.tokenize('dita e mire')).index, 5);
+    assert.equal(M.findResync(script, 12, M.tokenize('dita e mire')).index, 11);
+    assert.equal(M.findResync(script, 0, M.tokenize('e te ne')), null);
+    assert.equal(M.createTracker(LONG_SCRIPT, { resyncAfter: 0 }).lost, false);
+});

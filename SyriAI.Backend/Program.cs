@@ -110,10 +110,11 @@ builder.Services.AddSignalR(options => options.MaximumReceiveMessageSize = 8 * 1
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MediaService.MaxMediaBytes + 1024 * 1024);
 
 // ---------- Hosting (Railway or any server behind a proxy), see docs/DEPLOY.md ----------
-// Login cookies are encrypted with keys kept in App_Data, so logins survive a restart or
-// redeploy (App_Data is a persistent volume in the cloud, like the uploaded media).
+// Login cookies and form tokens are encrypted with keys kept in the database, so logins and
+// open forms survive a restart or redeploy (Render's free plan has no persistent disk).
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")));
+    .SetApplicationName("SyriAI")
+    .PersistKeysToDbContext<StudioDbContext>();
 // The proxy terminates HTTPS; trust its X-Forwarded-* headers so the app knows the real scheme
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

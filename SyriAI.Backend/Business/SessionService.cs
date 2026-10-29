@@ -32,8 +32,8 @@ public class SessionService(ISessionRepository sessions)
 
     public async Task<int> CreateAsync(SessionInput input, string userId)
     {
-        var timeline = input.Timeline is { ValueKind: JsonValueKind.Array } t ? t.GetRawText() : null;
-        if (timeline is { Length: > MaxTimelineChars }) timeline = null;
+        var timeline = JsonArray(input.Timeline);
+        var segments = JsonArray(input.Segments);
 
         var session = new StudioSession
         {
@@ -53,6 +53,7 @@ public class SessionService(ISessionRepository sessions)
             MatchRatePercent = input.MatchRatePercent,
             ManualNavigations = input.ManualNavigations,
             StallCount = input.StallCount,
+            RecoveryCount = Math.Max(0, input.RecoveryCount),
             MedianProcessingMs = input.MedianProcessingMs,
             P95ProcessingMs = input.P95ProcessingMs,
             FaceVisiblePercent = input.FaceVisiblePercent,
@@ -60,9 +61,23 @@ public class SessionService(ISessionRepository sessions)
             FaceLostCount = input.FaceLostCount,
             Notes = Trim(input.Notes, 2000),
             TimelineJson = timeline,
+            SegmentsJson = segments,
         };
         await sessions.AddAsync(session);
         return session.Id;
+    }
+
+    public async Task<ServiceResult<SessionDetail>> GetAsync(int id, string userId)
+    {
+        if (await sessions.GetAsync(id, userId) is not { } s) return ServiceResult<SessionDetail>.NotFound();
+        return ServiceResult<SessionDetail>.Success(new SessionDetail(
+            s.Id, s.Participant, s.Condition, s.ScriptTitle, s.Notes,
+            s.StartedAt, s.EndedAt, s.DurationSeconds,
+            s.TotalWords, s.WordsReached, s.ProgressPercent, s.AverageWpm,
+            s.RecognitionResults, s.MatchEvents, s.MatchRatePercent, s.ManualNavigations,
+            s.StallCount, s.RecoveryCount, s.MedianProcessingMs, s.P95ProcessingMs,
+            s.FaceVisiblePercent, s.EyeContactPercent, s.FaceLostCount,
+            s.ObserverLostCount, s.SusScore, ParseJson(s.TimelineJson), ParseJson(s.SegmentsJson)));
     }
 
     public async Task<ServiceResult<SessionPatchResult>> PatchAsync(int id, SessionPatch patch, string userId)
@@ -102,7 +117,7 @@ public class SessionService(ISessionRepository sessions)
         sb.AppendLine(string.Join(",",
             "id", "participant", "condition", "script", "started_at_utc", "duration_s",
             "total_words", "words_reached", "progress_pct", "avg_wpm",
-            "recognition_results", "match_events", "match_rate_pct", "manual_navigations", "stalls",
+            "recognition_results", "match_events", "match_rate_pct", "manual_navigations", "stalls", "recoveries",
             "median_processing_ms", "p95_processing_ms",
             "face_visible_pct", "eye_contact_pct", "face_lost_count",
             "observer_lost_count", "sus_score", "sus_answers", "notes"));
@@ -113,7 +128,7 @@ public class SessionService(ISessionRepository sessions)
                 s.Id, Csv(s.Participant), Csv(s.Condition), Csv(s.ScriptTitle),
                 s.StartedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), Num(s.DurationSeconds),
                 s.TotalWords, s.WordsReached, Num(s.ProgressPercent), Num(s.AverageWpm),
-                s.RecognitionResults, s.MatchEvents, Num(s.MatchRatePercent), s.ManualNavigations, s.StallCount,
+                s.RecognitionResults, s.MatchEvents, Num(s.MatchRatePercent), s.ManualNavigations, s.StallCount, s.RecoveryCount,
                 Num(s.MedianProcessingMs), Num(s.P95ProcessingMs),
                 Num(s.FaceVisiblePercent), Num(s.EyeContactPercent), s.FaceLostCount,
                 s.ObserverLostCount?.ToString(CultureInfo.InvariantCulture) ?? "",
@@ -130,6 +145,13 @@ public class SessionService(ISessionRepository sessions)
         var answers = JsonSerializer.Deserialize<int[]>(json) ?? [];
         return string.Join(";", answers);
     }
+
+    /// <summary>Raw JSON of an array field, or null when it is missing, not an array or too large</summary>
+    private static string? JsonArray(JsonElement? value) =>
+        value is { ValueKind: JsonValueKind.Array } a && a.GetRawText() is { Length: <= MaxTimelineChars } raw ? raw : null;
+
+    private static JsonElement? ParseJson(string? json) =>
+        string.IsNullOrEmpty(json) ? null : JsonDocument.Parse(json).RootElement.Clone();
 
     private static string? Trim(string? value, int max) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim() is var v && v.Length > max ? v[..max] : value.Trim();

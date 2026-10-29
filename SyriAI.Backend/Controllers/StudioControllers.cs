@@ -41,6 +41,9 @@ public class SessionsController(SessionService sessions) : StudioControllerBase
         return Created($"/api/sessions/{id}", new { id });
     }
 
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id) => FromResult(await sessions.GetAsync(id, UserId), Ok);
+
     [HttpPatch("{id:int}")]
     public async Task<IActionResult> Patch(int id, SessionPatch patch) => FromResult(await sessions.PatchAsync(id, patch, UserId), Ok);
 

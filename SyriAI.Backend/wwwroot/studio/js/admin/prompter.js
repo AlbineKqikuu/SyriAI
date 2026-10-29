@@ -88,10 +88,12 @@ startBtn.addEventListener('click', () => {
         return;
     }
     // Restarting ends (and reports) the running session first
-    if (isLive) StudioSessionLog.end({ showReport: false });
+    if (isLive) {
+        LiveShow.stop();
+        StudioSessionLog.end({ showReport: false });
+    }
 
-    words = splitWords(text);
-    renderScript(words);
+    setScriptWords(text);
     currentWordIndex = 0;
     scrollContainer.scrollTop = 0;
 
@@ -105,6 +107,7 @@ function goLive() {
     updateAnalytics();
     setLiveState(true);
     StudioSessionLog.start();
+    LiveShow.start();
 
     if (!recognition) {
         notify("Ky shfletues nuk mbështet njohjen e zërit (përdorni Chrome ose Edge). Sesioni vazhdon me tastierë ose lëvizje automatike.", 'warning', 7000);
@@ -153,6 +156,7 @@ function stopSession() {
     setLiveState(false);
     setAutoScroll(false);
     if (recognition) recognition.stop();
+    LiveShow.stop();
     // The camera keeps running so the preview and effects stay available
     if (wasLive) StudioSessionLog.end({ showReport: true });
 }
@@ -213,16 +217,24 @@ function scrollStep(timestamp) {
     requestAnimationFrame(scrollStep);
 }
 
-function applyScriptText() {
-    words = splitWords(scriptInput.value);
+/** Split the script into prompter words and stories ("## Title | 1:30" lines), then render it */
+function setScriptWords(text) {
+    const parsed = SyriRundown.parse(text);
+    words = parsed.words;
+    rundownSegments = parsed.segments;
+    rundownMarked = parsed.marked;
     renderScript(words);
+}
+
+function applyScriptText() {
+    setScriptWords(scriptInput.value);
     currentWordIndex = 0;
 }
 
 // Debounced so typing in a long script does not re-render on every keystroke
 let scriptInputTimer = null;
 scriptInput.addEventListener('input', () => {
-    wordCountDisplay.textContent = `${splitWords(scriptInput.value).length} fjalë`;
+    wordCountDisplay.textContent = `${SyriRundown.parse(scriptInput.value).words.length} fjalë`;
     clearTimeout(scriptInputTimer);
     scriptInputTimer = setTimeout(applyScriptText, 250);
 });
@@ -240,6 +252,15 @@ function renderScript(wordList) {
     tracker = SyriMatcher.createTracker(wordList, studioSettings.matcher);
     if (wordCountDisplay) wordCountDisplay.textContent = `${count} fjalë`;
 
+    // Story headings go before the first word of each story (only when the script has "##" lines)
+    const headingsAt = new Map();
+    if (rundownMarked) {
+        rundownSegments.forEach((seg, k) => {
+            const html = `<div class="segment-heading" id="segment-${k}"><span class="segment-num">${k + 1}</span>${escapeHtml(seg.title)}</div>`;
+            headingsAt.set(seg.start, (headingsAt.get(seg.start) || '') + html);
+        });
+    }
+
     // Performance optimization: Using Array and join is much faster than string concatenation
     const htmlArr = new Array(count);
     for (let i = 0; i < count; i++) {
@@ -253,10 +274,11 @@ function renderScript(wordList) {
         }
 
         // The space stays outside the span so underlines and the highlight fit the word
-        htmlArr[i] = `<span id="word-${i}" class="${className}">${escapeHtml(word)}</span> `;
+        htmlArr[i] = (headingsAt.get(i) || '') + `<span id="word-${i}" class="${className}">${escapeHtml(word)}</span> `;
     }
 
-    scriptDisplay.innerHTML = htmlArr.join('');
+    scriptDisplay.innerHTML = htmlArr.join('') + (headingsAt.get(count) || '');
+    LiveShow.setSegments(rundownSegments, rundownMarked);
     broadcastUpdate('script_update', { words: wordList, html: scriptDisplay.innerHTML });
 }
 
@@ -280,6 +302,7 @@ if (recognition) recognition.onresult = (event) => {
         setAutoScroll(true);
         return;
     }
+    if (LiveShow.voiceCommand(spokenLower)) return;
 
     if (spokenLower) {
         matchAndScroll(spokenLower, receivedAt);
@@ -309,7 +332,10 @@ function matchAndScroll(spokenText, receivedAt = performance.now()) {
         scrollToWord(index);
         // Time spent from receiving the transcript until the highlight is updated
         StudioSessionLog.recordMatch(index, performance.now() - receivedAt);
+        if (tracker.recovered) StudioSessionLog.recordRecovery();
+        LiveShow.onPosition(index);
     }
+    LiveShow.setLost(tracker.lost, tracker.recovered);
     updateAnalytics();
 }
 
@@ -448,6 +474,20 @@ function navigate(direction) {
     scrollToWord(currentWordIndex);
     tracker.setPosition(currentWordIndex + 1);
     StudioSessionLog.recordNavigation(currentWordIndex);
+    LiveShow.onPosition(currentWordIndex);
+    LiveShow.setLost(false);
+    updateAnalytics();
+}
+
+/** Jump to the first word of a story (rundown); the tracker expects that word next */
+function jumpToWord(index) {
+    if (words.length === 0) return;
+    currentWordIndex = Math.min(words.length - 1, Math.max(0, index));
+    highlightWord(currentWordIndex);
+    scrollToWord(currentWordIndex);
+    tracker.setPosition(currentWordIndex);
+    StudioSessionLog.recordNavigation(currentWordIndex);
+    LiveShow.setLost(false);
     updateAnalytics();
 }
 
@@ -459,7 +499,11 @@ window.addEventListener('keydown', (e) => {
     // Avoid navigation when typing
     if (['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
 
-    if (NEXT_KEYS.includes(e.key)) {
+    // Shift + arrow: whole story (rundown) instead of one word
+    if (e.shiftKey && (NEXT_KEYS.includes(e.key) || PREV_KEYS.includes(e.key))) {
+        e.preventDefault();
+        LiveShow.step(NEXT_KEYS.includes(e.key) ? 1 : -1);
+    } else if (NEXT_KEYS.includes(e.key)) {
         e.preventDefault();
         navigate(1);
     } else if (PREV_KEYS.includes(e.key)) {

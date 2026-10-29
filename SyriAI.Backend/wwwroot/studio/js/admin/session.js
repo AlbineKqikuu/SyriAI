@@ -40,6 +40,7 @@ const StudioSessionLog = (() => {
             lastProgressAt: now,
             stalled: false,
             stallCount: 0,
+            recoveries: 0,
             usedAutoscroll: isAutoScrolling,
         };
         clearInterval(sampler);
@@ -88,6 +89,11 @@ const StudioSessionLog = (() => {
             s.matchEvents++;
             s.processingMs.push(processingMs);
             progress(index);
+        },
+
+        /** The tracker found the reader again after they left the script */
+        recordRecovery() {
+            if (s) s.recoveries++;
         },
 
         recordNavigation(index) {
@@ -149,12 +155,14 @@ const StudioSessionLog = (() => {
             matchRatePercent: round(pct(session.matchEvents, session.recognitionResults), 1),
             manualNavigations: session.manualNavigations,
             stallCount: session.stallCount,
+            recoveryCount: session.recoveries,
             medianProcessingMs: round(percentile(sorted, 0.5), 2),
             p95ProcessingMs: round(percentile(sorted, 0.95), 2),
             faceVisiblePercent: round(pct(session.faceVisibleFrames, session.faceFrames), 1),
             eyeContactPercent: round(pct(session.eyeContactFrames, session.faceVisibleFrames), 1),
             faceLostCount: session.faceLostCount,
             timeline: session.timeline,
+            segments: LiveShow.takeSummary(),
         };
     }
 
@@ -239,6 +247,75 @@ const StudioSessionLog = (() => {
         </svg>`;
     }
 
+    /** Reading pace (words per minute) over a sliding window of the progress timeline */
+    function paceSeries(timeline, windowSeconds = 10) {
+        const out = [];
+        let j = 0;
+        for (let i = 0; i < timeline.length; i++) {
+            const [t, w] = timeline[i];
+            while (j < i && t - timeline[j][0] > windowSeconds) j++;
+            const [t0, w0] = timeline[j];
+            if (t - t0 >= windowSeconds / 2) out.push([t, Math.max(0, ((w - w0) / (t - t0)) * 60)]);
+        }
+        return out;
+    }
+
+    function paceChart(timeline, averageWpm) {
+        const series = paceSeries(timeline);
+        if (series.length < 2) return '<p class="muted">Sesioni ishte shumë i shkurtër për grafikun e shpejtësisë.</p>';
+        const W = 560, H = 160, P = 28;
+        const maxT = Math.max(1, series[series.length - 1][0]);
+        const maxV = Math.max(60, ...series.map(([, v]) => v)) * 1.1;
+        const x = t => P + (t / maxT) * (W - P * 1.5);
+        const y = v => H - P - (v / maxV) * (H - P * 1.6);
+        const points = series.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+        return `<svg class="report-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Shpejtësia e leximit në kohë">
+            <line x1="${P}" y1="${H - P}" x2="${W - P / 2}" y2="${H - P}" class="axis" />
+            <line x1="${P}" y1="${P / 2}" x2="${P}" y2="${H - P}" class="axis" />
+            <line x1="${P}" y1="${y(averageWpm)}" x2="${W - P / 2}" y2="${y(averageWpm)}" class="avg" />
+            <polyline points="${points}" class="series series--pace" />
+            <text x="${P}" y="${H - 8}" class="tick">0 s</text>
+            <text x="${W - P / 2}" y="${H - 8}" class="tick" text-anchor="end">${formatDuration(maxT)}</text>
+            <text x="${P + 4}" y="${y(averageWpm) - 4}" class="tick">mesatarja ${Math.round(averageWpm)} fjalë/min</text>
+            <text x="${P + 4}" y="${P / 2 + 10}" class="tick">${Math.round(maxV)}</text>
+        </svg>`;
+    }
+
+    const SEGMENT_STATUS = { done: 'Lexuar', partial: 'Pjesërisht', skipped: 'Hequr', 'not-reached': 'Pa arritur' };
+
+    function segmentsTable(segments) {
+        if (!Array.isArray(segments) || !segments.length) return '';
+        const rows = segments.map((seg, i) => {
+            const reached = seg.status !== 'skipped' && seg.status !== 'not-reached';
+            const diff = reached ? seg.actualSeconds - seg.plannedSeconds : null;
+            const diffClass = diff === null ? '' : diff > 5 ? 'is-over' : diff < -5 ? 'is-under' : '';
+            return `<tr>
+                <td class="num">${i + 1}</td>
+                <td>${escapeHtml(seg.title)}</td>
+                <td class="num">${seg.plannedEstimated ? '~' : ''}${formatDuration(seg.plannedSeconds)}</td>
+                <td class="num">${reached ? formatDuration(seg.actualSeconds) : '—'}</td>
+                <td class="num ${diffClass}">${diff === null ? '—' : SyriRundown.formatDelta(diff)}</td>
+                <td class="num">${seg.wordsRead} / ${seg.words}</td>
+                <td class="num">${reached && seg.wpm ? seg.wpm : '—'}</td>
+                <td>${SEGMENT_STATUS[seg.status] || seg.status}</td>
+            </tr>`;
+        }).join('');
+        const plannedTotal = segments.reduce((sum, seg) => sum + (seg.status === 'skipped' ? 0 : seg.plannedSeconds), 0);
+        const actualTotal = segments.reduce((sum, seg) => sum + seg.actualSeconds, 0);
+        return `<h3 class="report-subtitle">Lajmet (plani kundrejt kohës reale)</h3>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th class="num">#</th><th>Lajmi</th><th class="num">Plani</th><th class="num">Reale</th>
+                        <th class="num">Diferenca</th><th class="num">Fjalë</th><th class="num">WPM</th><th>Statusi</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot><tr><td></td><td>Gjithsej</td><td class="num">${formatDuration(plannedTotal)}</td>
+                        <td class="num">${formatDuration(actualTotal)}</td>
+                        <td class="num ${actualTotal - plannedTotal > 5 ? 'is-over' : actualTotal - plannedTotal < -5 ? 'is-under' : ''}">${SyriRundown.formatDelta(actualTotal - plannedTotal)}</td>
+                        <td colspan="3"></td></tr></tfoot>
+                </table>
+            </div>`;
+    }
+
     function showSessionReport(summary, saving) {
         const conditionLabel = CONDITION_LABELS[summary.condition] || summary.condition;
         const voiceUsed = summary.recognitionResults > 0;
@@ -254,6 +331,7 @@ const StudioSessionLog = (() => {
                 ${statCard('Progresi', `${summary.progressPercent}%`, `${summary.wordsReached} / ${summary.totalWords} fjalë`)}
                 ${statCard('Shpejtësia mesatare', `${summary.averageWpm}`, 'fjalë në minutë')}
                 ${statCard('Ndalesa', summary.stallCount, `pa progres > ${STALL_AFTER_MS / 1000} s`)}
+                ${statCard('Rikuperime', voiceUsed ? (summary.recoveryCount ?? 0) : '—', voiceUsed ? 'vendi u gjet pas daljes nga skripti' : '')}
                 ${statCard('Përputhja e zërit', voiceUsed ? `${summary.matchRatePercent}%` : '—', voiceUsed ? `${summary.matchEvents} / ${summary.recognitionResults} përditësime` : 'njohja e zërit nuk u përdor')}
                 ${statCard('Koha e përpunimit', voiceUsed ? `${summary.medianProcessingMs} ms` : '—', voiceUsed ? `mediana · p95 ${summary.p95ProcessingMs} ms` : '')}
                 ${statCard('Fytyra e dukshme', `${summary.faceVisiblePercent}%`, `humbur ${summary.faceLostCount}×`)}
@@ -261,6 +339,9 @@ const StudioSessionLog = (() => {
             </div>
             <h3 class="report-subtitle">Progresi në kohë</h3>
             ${progressChart(summary.timeline, summary.totalWords)}
+            <h3 class="report-subtitle">Shpejtësia në kohë</h3>
+            ${paceChart(summary.timeline, summary.averageWpm)}
+            ${segmentsTable(summary.segments)}
             <h3 class="report-subtitle">Pas sesionit (studimi)</h3>
             <div class="report-study">
                 <label class="field-label" for="observer-lost">Herë që pjesëmarrësi humbi vendin (numëruar nga vëzhguesi)</label>
@@ -301,6 +382,8 @@ const StudioSessionLog = (() => {
             }
             observerInput.disabled = false;
             studyButtons.forEach(b => { b.disabled = false; });
+            if (summary.observerLostCount != null) observerInput.value = summary.observerLostCount;
+            if (summary.susScore != null) susScore.textContent = `SUS: ${summary.susScore} / 100`;
 
             modal.body.querySelector('[data-action="save-observer"]').addEventListener('click', async () => {
                 const value = parseInt(observerInput.value, 10);
@@ -388,7 +471,7 @@ const StudioSessionLog = (() => {
     function sessionToCsv(summary) {
         const fields = ['participant', 'condition', 'scriptTitle', 'startedAt', 'durationSeconds', 'totalWords', 'wordsReached',
             'progressPercent', 'averageWpm', 'recognitionResults', 'matchEvents', 'matchRatePercent', 'manualNavigations',
-            'stallCount', 'medianProcessingMs', 'p95ProcessingMs', 'faceVisiblePercent', 'eyeContactPercent', 'faceLostCount', 'notes'];
+            'stallCount', 'recoveryCount', 'medianProcessingMs', 'p95ProcessingMs', 'faceVisiblePercent', 'eyeContactPercent', 'faceLostCount', 'notes'];
         const cell = v => (v === null || v === undefined) ? '' : typeof v === 'number' ? String(v) : `"${String(v).replace(/"/g, '""')}"`;
         return '﻿' + fields.join(',') + '\n' + fields.map(f => cell(summary[f])).join(',') + '\n';
     }
@@ -430,7 +513,7 @@ const StudioSessionLog = (() => {
                 <td class="num">${x.eyeContactPercent}%</td>
                 <td class="num">${x.observerLostCount ?? '—'}</td>
                 <td class="num">${x.susScore ?? '—'}</td>
-                <td><button class="btn btn-ghost btn-sm" data-action="delete">Fshi</button></td>
+                <td class="row-actions"><button class="btn btn-secondary btn-sm" data-action="report">Raporti</button><button class="btn btn-ghost btn-sm" data-action="delete">Fshi</button></td>
             </tr>`).join('');
 
         modal.body.innerHTML = `
@@ -447,6 +530,20 @@ const StudioSessionLog = (() => {
             </div>`;
 
         modal.body.addEventListener('click', async (e) => {
+            const reportBtn = e.target.closest('[data-action="report"]');
+            if (reportBtn) {
+                const id = Number(reportBtn.closest('tr').dataset.id);
+                try {
+                    const detail = await api(`/api/sessions/${id}`);
+                    // Same shape as a fresh summary; the API sends UTC times without a zone suffix
+                    detail.startedAt = parseUtc(detail.startedAt).toISOString();
+                    detail.timeline = detail.timeline || [[0, 0]];
+                    showSessionReport(detail, Promise.resolve(id));
+                } catch (err) {
+                    notify(`Raporti nuk u hap: ${err.message}`, 'error');
+                }
+                return;
+            }
             const btn = e.target.closest('[data-action="delete"]');
             if (!btn) return;
             // Two-step delete: first click asks for confirmation

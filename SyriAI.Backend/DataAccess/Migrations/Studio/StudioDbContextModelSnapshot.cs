@@ -23,6 +23,25 @@ namespace SyriAI.Backend.DataAccess.Migrations.Studio
             MySqlModelBuilderExtensions.UseGuidCollation(modelBuilder, "");
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataProtectionKeys");
+                });
+
             modelBuilder.Entity("SyriAI.Backend.Entities.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -159,9 +178,15 @@ namespace SyriAI.Backend.DataAccess.Migrations.Studio
                     b.Property<int>("RecognitionResults")
                         .HasColumnType("int");
 
+                    b.Property<int>("RecoveryCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("ScriptTitle")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
+
+                    b.Property<string>("SegmentsJson")
+                        .HasColumnType("longtext");
 
                     b.Property<int>("StallCount")
                         .HasColumnType("int");

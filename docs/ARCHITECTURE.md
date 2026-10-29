@@ -49,6 +49,22 @@ sequenceDiagram
 5. A weak (stem-only) guess more than 5 words ahead is rejected.
 6. Interim transcripts that bring no new word are ignored. Chrome resends the whole sentence
    on every update, and re-matching it would jump to later repeats of the same word.
+7. Recovery: after `resyncAfter` (3) updates in a row without a match, the tracker is "lost"
+   (the studio and presenter screen show "Duke kërkuar vendin…"). It then searches the whole
+   script for the last `resyncWords` (3) spoken words in a row (at least one of them 4+ letters)
+   and jumps to the nearest such place, preferring forward. Each jump counts as a *recovery*
+   in the session report. `resyncAfter: 0` turns this off.
+
+## Rundown and back-timing
+
+`js/shared/rundown.js` (UMD, unit-tested like the matcher) reads stories from the script: a line
+`## Title | 1:30` starts a story with a planned length; without a length the plan is estimated
+from its words at the planned pace (Settings, default 150 words/min). Heading lines are not
+prompter words. `js/admin/show.js` keeps the story list, follows which story is being read,
+and computes back-timing every 0.5 s: time left in the story, and the projected end of the show
+(elapsed + current story's words left ÷ current pace + planned lengths of the later stories)
+against the plan. Stories can be reordered before LIVE (the script text is rewritten) and
+dropped from the plan while LIVE. Per-story planned and actual times are saved with the session.
 
 ## Real-time sync
 
@@ -87,6 +103,12 @@ sends its URL; each screen downloads and renders it itself.
 | `draw_segment` | both | `{ x1, y1, x2, y2, color }` normalised line |
 | `clear_draw` | both | `true` |
 | `nav_next` / `nav_prev` | client → admin | — |
+| `nav_next_segment` / `nav_prev_segment` | client → admin | — (Shift + arrow: next / previous story) |
+| `show_timing` | admin → client | `{ index, count, title, segmentLeft, delta, next }` or `null` when not LIVE |
+| `segment_jump` | admin → client | story index (scrolls its heading into view) |
+| `tracking_state` | admin → client | `{ lost, found? }` lost-place badge |
+| `producer_cue` | admin → client | `{ id, text }` producer message (`text: null` hides it) |
+| `cue_shown` / `cue_ack` | client → admin | `{ id }` message displayed / confirmed by the presenter |
 
 ## Backend
 
@@ -124,7 +146,8 @@ Errors from the business layer are returned as `{ "error": "…" }`, the shape t
 |---|---|---|
 | GET / POST | `/api/scripts` | list / create scripts |
 | GET / PUT / DELETE | `/api/scripts/{id}` | read / update / delete a script |
-| GET / POST | `/api/sessions` | list / save session metrics |
+| GET / POST | `/api/sessions` | list / save session metrics (with timeline and per-story times) |
+| GET | `/api/sessions/{id}` | one session with its timeline and stories, to reopen its report |
 | PATCH | `/api/sessions/{id}` | add study data: observer "lost place" count, SUS answers (score computed on the server), notes |
 | DELETE | `/api/sessions/{id}` | delete a session |
 | GET | `/api/sessions/export.csv` | all sessions as CSV (UTF-8 BOM, formula-injection safe) |

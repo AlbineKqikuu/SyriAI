@@ -60,6 +60,9 @@ public class StudioSession
     /// <summary>Times the reader paused more than a few seconds without a match.</summary>
     public int StallCount { get; set; }
 
+    /// <summary>Times the tracker lost the reader (off-script) and found them again further on.</summary>
+    public int RecoveryCount { get; set; }
+
     /// <summary>Median / 95th percentile time from a recognition result to the highlight update (ms).</summary>
     public double MedianProcessingMs { get; set; }
     public double P95ProcessingMs { get; set; }
@@ -86,6 +89,9 @@ public class StudioSession
 
     /// <summary>Optional JSON array of [secondsFromStart, wordIndex] samples for progress charts.</summary>
     public string? TimelineJson { get; set; }
+
+    /// <summary>Optional JSON array with planned and actual time per rundown segment (story).</summary>
+    public string? SegmentsJson { get; set; }
 }
 
 /// <summary>Per-user studio preferences stored as a JSON document.</summary>

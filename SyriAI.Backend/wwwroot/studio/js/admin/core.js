@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = Object.freeze({
     readingLine: false,
     mirror: false,
     speechLang: 'sq-AL',
+    targetWpm: 150,         // planned reading pace, for stories without a written length
     broadcastLayout: 'split', // documents on the YouTube output: 'split' | 'box'
     ticker: [
         'SOT: ZHVILLIMET E FUNDIT NGA STUDIO E SYRIAI',
@@ -220,6 +221,9 @@ const scrollSpeedInput = document.getElementById('scroll-speed');
 const speedValDisplay = document.getElementById('speed-val');
 
 let words = [];
+// Stories of the show (see js/shared/rundown.js); set together with `words`
+let rundownSegments = [];
+let rundownMarked = false;
 let pageWordBoundaries = [];
 let allWordPositions = [];
 let currentWordIndex = 0;

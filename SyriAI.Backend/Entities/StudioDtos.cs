@@ -17,7 +17,7 @@ public record SessionInput(
     int RecognitionResults, int MatchEvents, double MatchRatePercent, int ManualNavigations,
     int StallCount, double MedianProcessingMs, double P95ProcessingMs,
     double FaceVisiblePercent, double EyeContactPercent, int FaceLostCount,
-    string? Notes, JsonElement? Timeline);
+    string? Notes, JsonElement? Timeline, int RecoveryCount, JsonElement? Segments);
 
 /// <summary>Data added after a session: researcher count, SUS answers, notes. Null fields are left unchanged.</summary>
 public record SessionPatch(int? ObserverLostCount, int[]? SusAnswers, string? Notes);
@@ -28,6 +28,16 @@ public record SessionSummary(
     int TotalWords, int WordsReached, double ProgressPercent, double AverageWpm, double MatchRatePercent,
     int StallCount, double MedianProcessingMs, double EyeContactPercent,
     int? ObserverLostCount, double? SusScore);
+
+/// <summary>One saved session with its timeline and segments, to show its report again.</summary>
+public record SessionDetail(
+    int Id, string? Participant, string? Condition, string? ScriptTitle, string? Notes,
+    DateTime StartedAt, DateTime EndedAt, double DurationSeconds,
+    int TotalWords, int WordsReached, double ProgressPercent, double AverageWpm,
+    int RecognitionResults, int MatchEvents, double MatchRatePercent, int ManualNavigations,
+    int StallCount, int RecoveryCount, double MedianProcessingMs, double P95ProcessingMs,
+    double FaceVisiblePercent, double EyeContactPercent, int FaceLostCount,
+    int? ObserverLostCount, double? SusScore, JsonElement? Timeline, JsonElement? Segments);
 
 public record SessionPatchResult(int Id, int? ObserverLostCount, double? SusScore);
 

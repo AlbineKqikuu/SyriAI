@@ -9,7 +9,7 @@ RUN dotnet publish -c Release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app ./
-# Uploaded media and the login-cookie keys live here; mount a persistent volume on it
+# Uploaded media lives here; mount a persistent volume on it (login keys are in the database)
 RUN mkdir -p /app/App_Data
 ENV ASPNETCORE_ENVIRONMENT=Production
 # Railway passes the port in $PORT
