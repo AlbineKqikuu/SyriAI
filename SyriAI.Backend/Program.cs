@@ -21,11 +21,15 @@ var builder = WebApplication.CreateBuilder(args);
 // ---------- Data access layer: MySQL ----------
 // The connection string (with the password) lives in user-secrets, see docs/DATABASE.md
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-var serverVersion = ServerVersion.AutoDetect(connectionString);
+var serverVersion = DetectServerVersion(connectionString);
+// The cloud database (TiDB) sometimes drops idle connections: retry such errors a few times
+// instead of failing the request
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, serverVersion));
+    options.UseMySql(connectionString, serverVersion, mysql => mysql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null)));
 builder.Services.AddDbContext<StudioDbContext>(options =>
-    options.UseMySql(connectionString, serverVersion, mysql => mysql.MigrationsHistoryTable(StudioDbContext.MigrationsHistoryTable)));
+    options.UseMySql(connectionString, serverVersion, mysql => mysql
+        .MigrationsHistoryTable(StudioDbContext.MigrationsHistoryTable)
+        .EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null)));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddScoped<IScriptRepository, ScriptRepository>();
@@ -105,7 +109,14 @@ builder.Services.AddControllers(options =>
 
 // Real-time sync between the admin studio and client screens.
 // Media travels as URLs, so messages stay small; the limit covers long rendered scripts.
-builder.Services.AddSignalR(options => options.MaximumReceiveMessageSize = 8 * 1024 * 1024);
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 8 * 1024 * 1024;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    // A page busy with the camera AI may answer late; wait before calling the client gone
+    // (matches serverTimeoutInMilliseconds in js/shared/sync.js)
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+});
 
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MediaService.MaxMediaBytes + 1024 * 1024);
 
@@ -131,9 +142,10 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var studioDb = scope.ServiceProvider.GetRequiredService<StudioDbContext>();
 
-    // Login and studio tables each have their own migrations (DataAccess/Migrations)
-    db.Database.Migrate();
-    studioDb.Database.Migrate();
+    // Login and studio tables each have their own migrations (DataAccess/Migrations).
+    // The database may still be waking up when the app starts: try a few times before giving up.
+    await RetryAsync(() => db.Database.MigrateAsync(), app.Logger);
+    await RetryAsync(() => studioDb.Database.MigrateAsync(), app.Logger);
 
     // Copy data from another database (see DataAccess/DatabaseImporter.cs):
     //   dotnet run -- import-sqlite app.db  |  dotnet run -- import-mysql "<connection string>"
@@ -207,6 +219,13 @@ app.MapRazorPages();
 app.MapControllers();
 app.MapHub<StudioHub>(StudioHub.Path);
 
+// Health check for the host (Render): answers without touching the database
+app.MapGet("/healthz", () => Results.Text("ok"));
+
+// Studio pages call this every few minutes: the live connection alone does not count as
+// activity, so without it the 20-minute sliding login would expire in the middle of a show
+app.MapGet("/api/ping", () => Results.NoContent()).RequireAuthorization();
+
 app.MapGet("/logout", async (SignInManager<IdentityUser> signInManager) =>
 {
     await signInManager.SignOutAsync();
@@ -214,6 +233,44 @@ app.MapGet("/logout", async (SignInManager<IdentityUser> signInManager) =>
 });
 
 app.Run();
+
+static ServerVersion DetectServerVersion(string connectionString)
+{
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            return ServerVersion.AutoDetect(connectionString);
+        }
+        catch (Exception) when (attempt < 5)
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(3 * attempt));
+        }
+        catch (Exception)
+        {
+            // Still unreachable: start anyway with the version TiDB and MySQL 8 report,
+            // so the app comes up and the retrying connections take over
+            return new MySqlServerVersion(new Version(8, 0, 11));
+        }
+    }
+}
+
+static async Task RetryAsync(Func<Task> action, ILogger logger)
+{
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            await action();
+            return;
+        }
+        catch (Exception ex) when (attempt < 5)
+        {
+            logger.LogWarning(ex, "Database not ready (attempt {Attempt}), retrying", attempt);
+            await Task.Delay(TimeSpan.FromSeconds(3 * attempt));
+        }
+    }
+}
 
 static bool IsApiRequest(PathString path) =>
     path.StartsWithSegments("/api") || path.StartsWithSegments(StudioHub.Path);

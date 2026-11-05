@@ -8,14 +8,14 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=2"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=15">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- MediaPipe Hands & Utils -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js"
         crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -368,6 +368,7 @@
                         <span class="ct-next" id="ct-next"></span>
                     </div>
                     <div id="tracking-lost" class="tracking-lost" role="status" hidden></div>
+                    <div id="sync-banner" class="sync-banner" role="status" hidden>Lidhja me studion u ndërpre — duke u rilidhur…</div>
                     <!-- Message from the producer (studio) -->
                     <div id="producer-cue" class="producer-cue" role="alert" hidden>
                         <span class="cue-text" id="cue-text"></span>
@@ -442,12 +443,13 @@
         <div class="lt-logo">Syri<span>AI</span></div>
     </div>
 
-    <script src="js/shared/sync.js?v=4"></script>
+    <script src="js/shared/sync.js?v=7"></script>
     <script src="js/shared/documents.js?v=4"></script>
     <script src="js/shared/ink-render.js?v=1"></script>
     <script src="js/shared/ink-receiver.js?v=1"></script>
-    <script src="js/shared/rundown.js?v=1"></script>
-    <script src="client.js?v=8"></script>
+    <script src="js/shared/rundown.js?v=2"></script>
+    <script src="js/shared/model-guard.js?v=2"></script>
+    <script src="client.js?v=10"></script>
 </body>
 
 </html>

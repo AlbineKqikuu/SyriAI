@@ -66,6 +66,13 @@ and computes back-timing every 0.5 s: time left in the story, and the projected 
 against the plan. Stories can be reordered before LIVE (the script text is rewritten) and
 dropped from the plan while LIVE. Per-story planned and actual times are saved with the session.
 
+## Camera models
+
+Every MediaPipe model (hands, face mesh, selfie segmentation) runs through
+`js/shared/model-guard.js`: an error or a frame that takes over 2.5 s is skipped, a model that
+fails 8 frames in a row is closed and created again after 3 s, and only after 3 restarts within
+5 minutes is it switched off. The camera picture, prompter and sync keep running meanwhile.
+
 ## Real-time sync
 
 `StudioSync` (`js/shared/sync.js`) sends `(type, data)` messages:
@@ -74,8 +81,23 @@ dropped from the plan while LIVE. Per-story planned and actual times are saved w
   private group; a message goes to the sender's *other* connections (`OthersInGroup`).
 - **Fallback:** `BroadcastChannel('syriai_sync')` when the hub is unreachable (e.g. static hosting).
   It only reaches tabs of the same browser.
-- Messages sent before the connection is ready are queued (max 200).
-- A client sends `client_ready` on every (re)connect; the admin answers with the full state.
+- The connection never gives up: retries after 0, 1, 2, 5, 10 s and then every 15 s, and at once
+  when the network returns or the tab becomes visible. Client timeout is 60 s on both sides, so
+  a page kept busy by the camera models is not mistaken for a lost connection.
+- "Latest value wins" messages (`cursor_pos`, scroll, `highlight_update`, `show_timing`…) are
+  merged to at most one per type every 33 ms; other messages keep their order and go out at once.
+  Messages use `send` (fire-and-forget), not `invoke`.
+- While disconnected, normal messages are queued (max 300); merged ones keep only their latest value.
+- A client sends `client_ready` on every (re)connect; the admin answers with the full state, and
+  also resends it after its own reconnect. The presenter screen shows a banner when the link is
+  down for more than 3 s.
+- An expired login (hub answers 401) gives the status `login`: the studio offers to sign in again
+  in a new tab, the presenter screen shows a sign-in link, and retries continue so both reconnect
+  by themselves afterwards. A server without the hub (404/405/501) switches to BroadcastChannel.
+- Studio pages call `GET /api/ping` every 5 minutes so the 20-minute sliding login does not
+  expire during a long show (the WebSocket alone does not renew it).
+- `script_update` carries the words and story starts, not HTML; every screen builds the same
+  HTML with `SyriRundown.renderHtml` (about 7× smaller for long scripts).
 
 Media is never sent through the sync channel. The admin uploads the file (`POST /api/media`) and
 sends its URL; each screen downloads and renders it itself.
@@ -152,7 +174,7 @@ Errors from the business layer are returned as `{ "error": "…" }`, the shape t
 | DELETE | `/api/sessions/{id}` | delete a session |
 | GET | `/api/sessions/export.csv` | all sessions as CSV (UTF-8 BOM, formula-injection safe) |
 | GET / PUT | `/api/settings` | per-user settings JSON (≤ 64 KB) |
-| POST | `/api/media` | upload (whitelisted types, ≤ 250 MB) |
+| POST | `/api/media` | upload (whitelisted types, ≤ 250 MB); saved to disk and to the database in 2 MB pieces |
 | GET | `/api/media/{id}` | download, with range requests for video seeking |
 
 API and hub calls without a valid login get `401` instead of a redirect to the login page.

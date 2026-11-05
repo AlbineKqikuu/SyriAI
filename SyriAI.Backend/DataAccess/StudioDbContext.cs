@@ -23,6 +23,7 @@ public class StudioDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<StudioSession> Sessions => Set<StudioSession>();
     public DbSet<UserSettings> Settings => Set<UserSettings>();
     public DbSet<MediaAsset> Media => Set<MediaAsset>();
+    public DbSet<MediaChunk> MediaChunks => Set<MediaChunk>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -33,5 +34,6 @@ public class StudioDbContext : DbContext, IDataProtectionKeyContext
         modelBuilder.Entity<Script>().HasIndex(s => new { s.UserId, s.UpdatedAt });
         modelBuilder.Entity<StudioSession>().HasIndex(s => new { s.UserId, s.StartedAt });
         modelBuilder.Entity<MediaAsset>().HasIndex(m => m.UserId);
+        modelBuilder.Entity<MediaChunk>().HasKey(c => new { c.MediaId, c.Index });
     }
 }

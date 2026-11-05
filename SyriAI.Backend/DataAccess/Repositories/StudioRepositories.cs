@@ -36,6 +36,10 @@ public interface IMediaRepository
 {
     Task<MediaAsset?> GetAsync(Guid id, string userId);
     Task AddAsync(MediaAsset asset);
+    Task AddChunkAsync(MediaChunk chunk);
+    Task<int> CountChunksAsync(Guid mediaId);
+    Task<byte[]?> GetChunkAsync(Guid mediaId, int index);
+    Task DeleteChunksAsync(Guid mediaId);
 }
 
 public class ScriptRepository(StudioDbContext db) : IScriptRepository
@@ -115,4 +119,19 @@ public class MediaRepository(StudioDbContext db) : IMediaRepository
         db.Media.Add(asset);
         await db.SaveChangesAsync();
     }
+
+    public async Task AddChunkAsync(MediaChunk chunk)
+    {
+        db.MediaChunks.Add(chunk);
+        await db.SaveChangesAsync();
+        db.Entry(chunk).State = EntityState.Detached; // do not keep every piece of a large file in memory
+    }
+
+    public Task<int> CountChunksAsync(Guid mediaId) => db.MediaChunks.CountAsync(c => c.MediaId == mediaId);
+
+    public Task<byte[]?> GetChunkAsync(Guid mediaId, int index) =>
+        db.MediaChunks.Where(c => c.MediaId == mediaId && c.Index == index).Select(c => c.Data).FirstOrDefaultAsync();
+
+    public Task DeleteChunksAsync(Guid mediaId) =>
+        db.MediaChunks.Where(c => c.MediaId == mediaId).ExecuteDeleteAsync();
 }

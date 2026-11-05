@@ -44,18 +44,21 @@ let scrollRemainder = 0;
 let lastReadIndex = -1;
 let currentMediaUrl = null;
 
-const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-
-hands.setOptions({
-    maxNumHands: 1,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.5
-});
-
-hands.onResults(onHandResults);
+function createHands() {
+    const model = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+    });
+    model.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0, // the light model: this screen only needs a pointer, and it often runs on the same computer as the studio
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.5
+    });
+    model.onResults(onHandResults);
+    return model;
+}
+// Errors skip a frame; a model that keeps failing restarts by itself (js/shared/model-guard.js)
+const handModel = createModelGuard('Hand tracking', createHands);
 
 function onHandResults(results) {
     // Smart resize: Only resize if dimensions changed to avoid clearing canvas every frame
@@ -158,9 +161,13 @@ function onHandResults(results) {
 
 // Start camera for hand tracking. Needs HTTPS on other devices (browsers only allow
 // the camera on localhost or secure origins); the screen still works without it.
+// The hand is checked on every second frame (15 per second): enough for pointing and writing,
+// half the work
+let handFrame = 0;
 const camera = new Camera(video, {
     onFrame: async () => {
-        await hands.send({ image: video });
+        if (handFrame++ % 2) return;
+        await handModel.send(video);
     },
     width: 640,
     height: 480
@@ -339,7 +346,9 @@ studioSync.on((type, data) => {
             drawCtx.clearRect(0, 0, drawGlass.width, drawGlass.height);
             break;
         case 'script_update':
-            scriptDisplay.innerHTML = data.html;
+            scriptDisplay.innerHTML = Array.isArray(data.words)
+                ? SyriRundown.renderHtml(data.words, data.segments, data.marked)
+                : data.html; // older studio version
             lastReadIndex = -1;
             break;
         case 'highlight_update':
@@ -405,9 +414,24 @@ studioSync.on((type, data) => {
     }
 });
 
+const syncBanner = document.getElementById('sync-banner');
+let syncBannerTimer = null;
+
 studioSync.onStatus((status) => {
     connectionIndicator.dataset.status = status;
     connectionIndicator.title = StudioSync.statusLabel(status);
+    // Short blips are not worth a banner; a few seconds without the studio are
+    clearTimeout(syncBannerTimer);
+    if (status === 'login') {
+        // Clickable: sign in again in a new tab, this screen reconnects by itself afterwards
+        syncBanner.innerHTML = 'Hyrja ka skaduar — <a href="/Identity/Account/Login?ReturnUrl=%2F" target="_blank">kyçuni përsëri</a>';
+        syncBanner.hidden = false;
+    } else if (status === 'reconnecting' || status === 'offline') {
+        syncBanner.textContent = 'Lidhja me studion u ndërpre — duke u rilidhur…';
+        syncBannerTimer = setTimeout(() => { syncBanner.hidden = false; }, 3000);
+    } else {
+        syncBanner.hidden = true;
+    }
     // Ask the admin for the full state whenever we (re)connect
     if (status === 'online' || status === 'local') studioSync.send('client_ready');
 });

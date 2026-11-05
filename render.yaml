@@ -7,7 +7,7 @@ services:
     rootDir: SyriAI.Backend
     dockerfilePath: ./Dockerfile
     plan: free
-    healthCheckPath: /Identity/Account/Login
+    healthCheckPath: /healthz
     envVars:
       - key: ConnectionStrings__DefaultConnection
         sync: false

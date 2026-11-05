@@ -50,7 +50,9 @@ public `https://` link.
 ### Limits of the free plans
 
 - The app sleeps after ~15 minutes without visitors; the next visit takes about a minute.
-- The free web service has no persistent disk: uploaded media (`App_Data`) is reset when the
-  app restarts, so files must be uploaded again. A paid instance with a disk mounted on
-  `/app/App_Data` keeps them. The login-cookie and form-token keys are stored in the database
+- The free web service has no persistent disk. Uploaded files are therefore also stored in the
+  database in 2 MB pieces (table `MediaChunks`) and rebuilt on disk the first time they are opened
+  after a restart. The login-cookie and form-token keys are stored in the database too
   (table `DataProtectionKeys`), so logins and open forms survive a restart or redeploy.
+- `.github/workflows/keep-awake.yml` pings `/healthz` every 10 minutes so the free service does
+  not fall asleep (~744 of the 750 free instance hours per month).

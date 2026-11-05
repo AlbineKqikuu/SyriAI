@@ -19,11 +19,14 @@ if (drawModeBtn) {
 }
 
 // Selfie Segmentation Setup
-const selfieSegmentation = new SelfieSegmentation({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
-});
-selfieSegmentation.setOptions({ modelSelection: 1 });
-selfieSegmentation.onResults(onSegmentationResults);
+function createSelfieSegmentation() {
+    const model = new SelfieSegmentation({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/${file}`
+    });
+    model.setOptions({ modelSelection: 1 });
+    model.onResults(onSegmentationResults);
+    return model;
+}
 
 function onSegmentationResults(results) {
     if (!outCtx) return;
@@ -116,17 +119,19 @@ function drawProfessionalStudio(ctx, w, h) {
 }
 
 // --- Hand Tracking & Drawing (Admin -> Client) ---
-const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-hands.setOptions({
-    maxNumHands: 1,
-    modelComplexity: 1, // the accurate model: steadier fingertip, fewer lost frames
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.5
-});
-
-hands.onResults(onHandResults);
+function createHands() {
+    const model = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+    });
+    model.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1, // the accurate model: steadier fingertip, fewer lost frames
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.5
+    });
+    model.onResults(onHandResults);
+    return model;
+}
 
 // --- Detection helpers: make the hand robust to tilt, jitter and short dropouts ---
 
@@ -293,16 +298,29 @@ function onHandResults(results) {
 }
 
 // MediaPipe Face Mesh Setup
-const faceMesh = new FaceMesh({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-});
-faceMesh.setOptions({
-    maxNumFaces: 1,
-    refineLandmarks: true, // Keep for gaze but complexity 0 is implied by faceMesh defaults
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
-faceMesh.onResults(onFaceResults);
+function createFaceMesh() {
+    const model = new FaceMesh({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
+    });
+    model.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true, // Keep for gaze but complexity 0 is implied by faceMesh defaults
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    model.onResults(onFaceResults);
+    return model;
+}
+
+// Each model runs through a guard (js/shared/model-guard.js): errors skip a frame, a model that
+// keeps failing is restarted by itself, and the camera, prompter and sync keep working meanwhile
+function onModelEvent(event, label) {
+    if (event === 'restarted') notify(`${label} u rinis automatikisht.`, 'info', 3000);
+    else notify(`${label} u ndal pas disa rinisjeve. Kamera dhe prompteri vazhdojnë; rifreskoni faqen për ta rikthyer.`, 'warning', 8000);
+}
+const handModel = createModelGuard('Gjurmimi i dorës', createHands, onModelEvent);
+const faceModel = createModelGuard('Gjurmimi i shikimit', createFaceMesh, onModelEvent);
+const backgroundModel = createModelGuard('Efekti i sfondit', createSelfieSegmentation, onModelEvent);
 
 // --- Gaze detection ---
 // Estimates gaze direction from where each iris sits between the eye corners, combined
@@ -504,19 +522,16 @@ function initCamera() {
                     frameCount++;
 
                     // The hand goes first so writing and pointing get the freshest frame
-                    await hands.send({ image: video });
+                    await handModel.send(video);
 
-                    // PERFORMANCE TWEAK: Only run segmentation if background effects are active
-                    if (isBlurActive || isStudioBgActive) {
-                        await selfieSegmentation.send({ image: video });
-                    } else {
-                        // Fallback: manually draw normal camera if no segmentation
-                        onSegmentationResults({ image: video, segmentationMask: null });
-                    }
+                    // PERFORMANCE TWEAK: Only run segmentation if background effects are active.
+                    // Without it (or while it restarts) the plain camera is drawn, so the picture never freezes.
+                    const segmented = (isBlurActive || isStudioBgActive) && await backgroundModel.send(video);
+                    if (!segmented) onSegmentationResults({ image: video, segmentationMask: null });
 
-                    // Gaze tracking on every second frame (15 per second is plenty for eye contact),
+                    // Gaze tracking on every third frame (10 per second is plenty for eye contact),
                     // which leaves more time for the hand
-                    if (frameCount % 2 === 0) await faceMesh.send({ image: video });
+                    if (frameCount % 3 === 0) await faceModel.send(video);
                 },
                 width: CAMERA_WIDTH,
                 height: CAMERA_HEIGHT

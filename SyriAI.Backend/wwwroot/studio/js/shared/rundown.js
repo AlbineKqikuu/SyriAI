@@ -143,5 +143,41 @@
         return s > 0 ? `+${text}` : s < 0 ? `-${text}` : text;
     }
 
-    return { DEFAULT_WPM, parseDuration, parse, plannedSeconds, segmentAt, moveSegment, backTime, formatDelta };
+    const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const escapeHtml = (text) => String(text).replace(/[&<>"']/g, c => ESCAPES[c]);
+
+    /**
+     * Prompter HTML for a script: one span per word (id word-N, with date / number / name
+     * highlighting) and a heading before each story when the script has "##" lines.
+     * The studio and the presenter screen both build it, so only the words travel over the network.
+     * @param {string[]} words
+     * @param {Array<{title: string, start: number}>} segments
+     * @param {boolean} marked
+     */
+    function renderHtml(words, segments = [], marked = false) {
+        const count = words.length;
+        const headingsAt = new Map();
+        if (marked) {
+            segments.forEach((seg, k) => {
+                const html = `<div class="segment-heading" id="segment-${k}"><span class="segment-num">${k + 1}</span>${escapeHtml(seg.title)}</div>`;
+                headingsAt.set(seg.start, (headingsAt.get(seg.start) || '') + html);
+            });
+        }
+        // An array joined once is much faster than growing a string for long scripts
+        const html = new Array(count);
+        for (let i = 0; i < count; i++) {
+            const word = words[i];
+            let className = 'word-span';
+            if (/\d/.test(word)) {
+                className += /\d{1,2}[\/.-]\d{1,2}/.test(word) ? ' hl-date' : ' hl-number';
+            } else if (i > 0 && word.length > 3 && /^[A-ZÇË]/.test(word)) {
+                className += ' hl-name';
+            }
+            // The space stays outside the span so underlines and the highlight fit the word
+            html[i] = (headingsAt.get(i) || '') + `<span id="word-${i}" class="${className}">${escapeHtml(word)}</span> `;
+        }
+        return html.join('') + (headingsAt.get(count) || '');
+    }
+
+    return { DEFAULT_WPM, parseDuration, parse, plannedSeconds, segmentAt, moveSegment, backTime, formatDelta, renderHtml };
 });

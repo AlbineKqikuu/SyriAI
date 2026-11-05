@@ -106,6 +106,18 @@ public class UserSettings
     public DateTime UpdatedAt { get; set; }
 }
 
+/// <summary>
+/// One piece of an uploaded file's bytes. The cloud host has no permanent disk, so every upload
+/// is also kept in the database in pieces small enough for TiDB's row size limit, and the file
+/// is rebuilt on disk when it is missing (after a restart or redeploy).
+/// </summary>
+public class MediaChunk
+{
+    public Guid MediaId { get; set; }
+    public int Index { get; set; }
+    public byte[] Data { get; set; } = [];
+}
+
 /// <summary>A document or media file uploaded to the studio and shared with the client screen.</summary>
 public class MediaAsset
 {

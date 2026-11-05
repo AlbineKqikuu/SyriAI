@@ -252,34 +252,14 @@ function renderScript(wordList) {
     tracker = SyriMatcher.createTracker(wordList, studioSettings.matcher);
     if (wordCountDisplay) wordCountDisplay.textContent = `${count} fjalë`;
 
-    // Story headings go before the first word of each story (only when the script has "##" lines)
-    const headingsAt = new Map();
-    if (rundownMarked) {
-        rundownSegments.forEach((seg, k) => {
-            const html = `<div class="segment-heading" id="segment-${k}"><span class="segment-num">${k + 1}</span>${escapeHtml(seg.title)}</div>`;
-            headingsAt.set(seg.start, (headingsAt.get(seg.start) || '') + html);
-        });
-    }
-
-    // Performance optimization: Using Array and join is much faster than string concatenation
-    const htmlArr = new Array(count);
-    for (let i = 0; i < count; i++) {
-        const word = wordList[i];
-        let className = "word-span";
-        if (/\d/.test(word)) {
-            if (/\d{1,2}[\/\.-]\d{1,2}/.test(word)) className += " hl-date";
-            else className += " hl-number";
-        } else if (i > 0 && word.length > 3 && /^[A-ZÇË]/.test(word)) {
-            className += " hl-name";
-        }
-
-        // The space stays outside the span so underlines and the highlight fit the word
-        htmlArr[i] = (headingsAt.get(i) || '') + `<span id="word-${i}" class="${className}">${escapeHtml(word)}</span> `;
-    }
-
-    scriptDisplay.innerHTML = htmlArr.join('') + (headingsAt.get(count) || '');
+    scriptDisplay.innerHTML = SyriRundown.renderHtml(wordList, rundownSegments, rundownMarked);
     LiveShow.setSegments(rundownSegments, rundownMarked);
-    broadcastUpdate('script_update', { words: wordList, html: scriptDisplay.innerHTML });
+    broadcastUpdate('script_update', scriptPayload());
+}
+
+/** The script for client screens: words and story starts only (each screen builds the HTML) */
+function scriptPayload() {
+    return { words, segments: rundownSegments.map(s => ({ title: s.title, start: s.start })), marked: rundownMarked };
 }
 
 if (recognition) recognition.onresult = (event) => {

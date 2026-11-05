@@ -8,17 +8,17 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=2"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=15">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <!-- MediaPipe Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js"
         crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js"
         crossorigin="anonymous"></script>
     <!-- Real-time sync with client screens -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -374,13 +374,14 @@
     <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
 
     <!-- Shared (admin + client) -->
-    <script src="js/shared/sync.js?v=4"></script>
+    <script src="js/shared/sync.js?v=7"></script>
     <script src="js/shared/matcher.js?v=5"></script>
-    <script src="js/shared/rundown.js?v=1"></script>
+    <script src="js/shared/rundown.js?v=2"></script>
+    <script src="js/shared/model-guard.js?v=2"></script>
     <script src="js/shared/documents.js?v=4"></script>
     <!-- Admin studio (plain scripts sharing one scope; order matters) -->
     <script src="js/admin/core.js?v=7"></script>
-    <script src="js/admin/prompter.js?v=5"></script>
+    <script src="js/admin/prompter.js?v=6"></script>
     <script src="js/admin/documents.js?v=6"></script>
     <script src="js/admin/session.js?v=5"></script>
     <script src="js/admin/show.js?v=1"></script>
@@ -388,10 +389,10 @@
     <script src="js/admin/settings.js?v=5"></script>
     <script src="js/shared/ink-render.js?v=1"></script>
     <script src="js/admin/ink.js?v=11"></script>
-    <script src="js/admin/camera.js?v=16"></script>
+    <script src="js/admin/camera.js?v=18"></script>
     <script src="js/admin/recording.js?v=4"></script>
     <script src="js/admin/graphics.js?v=4"></script>
-    <script src="js/admin/main.js?v=10"></script>
+    <script src="js/admin/main.js?v=12"></script>
 </body>
 
 </html>

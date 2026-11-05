@@ -1599,7 +1599,8 @@ select.text-input:focus {
     animation: live-blink 1s ease-in-out infinite;
 }
 
-.sync-status[data-status="offline"] {
+.sync-status[data-status="offline"],
+.sync-status[data-status="login"] {
     background: var(--danger-color);
 }
 
@@ -2811,4 +2812,30 @@ body.on-air .client-content-frame {
     display: flex;
     gap: 0.3rem;
     white-space: nowrap;
+}
+
+/* Presenter screen: the link to the studio is down (client.js) */
+.sync-banner {
+    position: absolute;
+    left: 50%;
+    bottom: 1.2rem;
+    transform: translateX(-50%);
+    z-index: 5300;
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    background: rgba(255, 59, 48, 0.92);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+.sync-banner[hidden] {
+    display: none;
+}
+
+.sync-banner a {
+    color: #fff;
+    text-decoration: underline;
+    pointer-events: auto;
 }

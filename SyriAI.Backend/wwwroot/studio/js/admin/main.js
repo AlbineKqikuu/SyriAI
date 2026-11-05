@@ -38,7 +38,7 @@ function sendFullState() {
     broadcastMedia();
     broadcastUpdate('view_mode', viewDocBtn.classList.contains('active') ? 'doc' : 'text');
     broadcastUpdate('font_size', fontSizeInput.value);
-    broadcastUpdate('script_update', { html: scriptDisplay.innerHTML });
+    broadcastUpdate('script_update', scriptPayload());
     if (lastReadIndex >= 0) broadcastUpdate('highlight_update', lastReadIndex);
     broadcastUpdate('pdf_scroll', pdfViewMain.scrollTop);
     const docMax = pdfViewMain.scrollHeight - pdfViewMain.clientHeight;
@@ -104,9 +104,37 @@ studioSync.onStatus((status, previous) => {
     const logout = document.querySelector('a[href="/logout"]');
     // (the online version has its own login, see js/shared/auth-guard.js)
     if (logout && !window.SYRIAI_STATIC_AUTH) logout.style.display = status === 'local' ? 'none' : '';
-    if (status === 'offline') notify("Lidhja me serverin u ndërpre. Ekrani i klientit nuk po sinkronizohet.", 'error', 7000);
-    // After a reconnect the client may have missed messages
-    if (status === 'online' && previous === 'reconnecting') sendFullState();
+    if (status === 'offline') notify("Lidhja me serverin u ndërpre. Duke u rilidhur automatikisht…", 'error', 7000);
+    if (status === 'login') showLoginExpired();
+    if (status === 'online' && ['reconnecting', 'offline', 'login'].includes(previous)) {
+        notify("Lidhja u rikthye.", 'success', 2500);
+        // The client screens may have missed messages meanwhile
+        sendFullState();
+    }
 });
+
+/** The login expired: offer to sign in again in a new tab; the studio reconnects by itself afterwards */
+function showLoginExpired() {
+    if (document.querySelector('.login-expired-modal')) return;
+    const content = document.createElement('div');
+    content.innerHTML = `<p>Hyrja juaj ka skaduar, prandaj ekranet nuk po sinkronizohen.</p>
+        <p class="muted">Kyçuni përsëri në skedën që hapet. Kjo faqe mbetet e hapur (skripti dhe LIVE nuk humbasin) dhe rilidhet vetë pas kyçjes.</p>`;
+    let closed = false;
+    const closeWhenBack = (status) => { if (status === 'online' && !closed) modal.close(); };
+    const modal = openModal({
+        title: 'Kyçuni përsëri',
+        content,
+        onClose: () => {
+            closed = true;
+            studioSync.offStatus(closeWhenBack);
+        },
+        actions: [
+            { label: 'Më vonë', onClick: (close) => close() },
+            { label: 'Kyçu', variant: 'primary', onClick: (close) => { window.open('/Identity/Account/Login?ReturnUrl=%2F', '_blank'); close(); } },
+        ],
+    });
+    modal.root.classList.add('login-expired-modal');
+    studioSync.onStatus(closeWhenBack);
+}
 
 studioSync.start();

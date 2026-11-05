@@ -81,6 +81,23 @@ namespace SyriAI.Backend.DataAccess.Migrations.Studio
                     b.ToTable("Media");
                 });
 
+            modelBuilder.Entity("SyriAI.Backend.Entities.MediaChunk", b =>
+                {
+                    b.Property<Guid>("MediaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("longblob");
+
+                    b.HasKey("MediaId", "Index");
+
+                    b.ToTable("MediaChunks");
+                });
+
             modelBuilder.Entity("SyriAI.Backend.Entities.Script", b =>
                 {
                     b.Property<int>("Id")
