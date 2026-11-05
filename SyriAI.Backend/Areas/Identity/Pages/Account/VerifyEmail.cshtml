@@ -11,6 +11,8 @@
     <div class="alert alert-info">Mënyra e zhvillimit: dërgimi i email-it nuk është konfiguruar, prandaj kodi shfaqet në terminalin ku po punon serveri.</div>
 }
 
+<div id="email-failed" class="alert alert-warning" role="alert" @(Model.EmailFailed ? "" : "hidden")>Email-i me kodin nuk u dërgua. Provoni “Dërgo kodin përsëri” më poshtë.</div>
+
 <form method="post" asp-route-returnUrl="@Model.ReturnUrl">
     <div asp-validation-summary="ModelOnly" class="validation-summary" style="@(ViewData.ModelState.IsValid ? "display:none" : "")"></div>
     <input type="hidden" asp-for="Email" />
@@ -54,6 +56,18 @@
             // Keep only digits in the code field (also when pasting "123 456")
             const code = document.getElementById('Code');
             code.addEventListener('input', () => { code.value = code.value.replace(/\D/g, '').slice(0, 6); });
+
+            // The e-mail is sent in the background: for 30 s, check whether it failed and say so
+            const failed = document.getElementById('email-failed');
+            const statusUrl = '?handler=Status&email=' + encodeURIComponent(document.querySelector('input[name="Email"]').value);
+            let checks = 0;
+            (function poll() {
+                if (!failed.hidden || checks++ >= 10) return;
+                fetch(statusUrl, { cache: 'no-store' })
+                    .then(r => r.json())
+                    .then(s => { if (s.failed) failed.hidden = false; else setTimeout(poll, 3000); })
+                    .catch(() => setTimeout(poll, 3000));
+            })();
         })();
     </script>
 }

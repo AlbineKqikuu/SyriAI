@@ -20,6 +20,14 @@ function updateLTDisplay() {
 }
 
 if (ltNameInput) ltNameInput.addEventListener('input', updateLTDisplay);
+
+// The presenter's name from registration fills the name banner (it can still be changed here)
+api('/api/me').then(me => {
+    if (me?.name && ltNameInput && !ltNameInput.value.trim()) {
+        ltNameInput.value = me.name;
+        updateLTDisplay();
+    }
+}).catch(() => { /* no backend (static hosting) or not signed in */ });
 if (ltTitleInput) ltTitleInput.addEventListener('input', updateLTDisplay);
 
 if (toggleLTBtn) {

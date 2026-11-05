@@ -6,8 +6,14 @@
     Layout = "_AuthLayout";
 }
 
-<form asp-route-returnUrl="@Model.ReturnUrl" method="post">
+<form asp-route-returnUrl="@Model.ReturnUrl" method="post" data-busy="Duke u regjistruar…">
     <div asp-validation-summary="All" class="validation-summary" style="@(ViewData.ModelState.IsValid ? "display:none" : "")"></div>
+
+    <div class="form-group">
+        <label asp-for="Input.Name">Emri dhe mbiemri</label>
+        <input asp-for="Input.Name" type="text" placeholder="p.sh. Albine Kqiku" autocomplete="name" maxlength="100" />
+        <span asp-validation-for="Input.Name" class="text-danger"></span>
+    </div>
 
     <div class="form-group">
         <label asp-for="Input.Email">Email</label>

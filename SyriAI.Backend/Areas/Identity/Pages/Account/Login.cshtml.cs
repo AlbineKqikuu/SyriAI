@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Net.Mail;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -112,7 +111,7 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                 await _codes.SendCodeAsync(user, CodePurpose.ConfirmEmail); // skipped silently within the 60 s cooldown
                 TempData["StatusMessage"] = "Llogaria juaj nuk është verifikuar ende. Ju dërguam një kod në email.";
             }
-            catch (SmtpException ex)
+            catch (EmailSendException ex)
             {
                 _logger.LogError(ex, "Verification e-mail could not be sent.");
                 TempData["WarningMessage"] = "Llogaria nuk është verifikuar dhe email-i nuk u dërgua. Provoni “Dërgo kodin përsëri”.";

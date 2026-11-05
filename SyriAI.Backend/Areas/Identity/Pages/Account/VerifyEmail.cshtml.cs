@@ -1,4 +1,3 @@
-using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -35,6 +34,8 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
         public string? ReturnUrl { get; set; }
         public int ResendSeconds { get; private set; }
         public bool CanSendEmail => _codes.CanSendEmail;
+        /// <summary>The code e-mail (sent in the background) has already failed</summary>
+        public bool EmailFailed { get; private set; }
         public int ValidMinutes => AccountCodeService.ValidMinutes;
 
         public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
@@ -48,8 +49,20 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                 TempData["StatusMessage"] = "Email-i është verifikuar tashmë. Mund të kyçeni.";
                 return RedirectToPage("./Login", new { returnUrl });
             }
-            if (user != null) ResendSeconds = _codes.SecondsUntilResend(user, CodePurpose.ConfirmEmail);
+            if (user != null)
+            {
+                ResendSeconds = _codes.SecondsUntilResend(user, CodePurpose.ConfirmEmail);
+                EmailFailed = _codes.LastSendFailed(user);
+            }
             return Page();
+        }
+
+        /// <summary>Polled by the page for a few seconds: did the background e-mail fail?</summary>
+        public async Task<IActionResult> OnGetStatusAsync()
+        {
+            var user = string.IsNullOrWhiteSpace(Email) ? null : await _userManager.FindByEmailAsync(Email);
+            // Same answer shape whether or not the account exists
+            return new JsonResult(new { failed = user is { EmailConfirmed: false } && _codes.LastSendFailed(user) });
         }
 
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
@@ -100,7 +113,7 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                         return RedirectToPage(new { email = Email, returnUrl });
                     }
                 }
-                catch (SmtpException ex)
+                catch (EmailSendException ex)
                 {
                     _logger.LogError(ex, "Verification e-mail could not be sent.");
                     TempData["WarningMessage"] = "Email-i nuk u dërgua. Provoni përsëri pas pak.";

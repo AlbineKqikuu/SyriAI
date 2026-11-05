@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -33,8 +32,16 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
 
         public string ReturnUrl { get; set; }
 
+        /// <summary>Claim that keeps the user's full name (shown in the menu and the studio)</summary>
+        public const string NameClaim = "display_name";
+
         public class InputModel
         {
+            [Required(ErrorMessage = "Shkruani emrin.")]
+            [StringLength(100, ErrorMessage = "Emri mund të ketë deri në {1} karaktere.")]
+            [Display(Name = "Emri dhe mbiemri")]
+            public string Name { get; set; }
+
             [Required(ErrorMessage = "Shkruani email-in.")]
             [EmailAddress(ErrorMessage = "Adresa e email-it nuk është e vlefshme.")]
             [Display(Name = "Email")]
@@ -89,6 +96,7 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            await SaveNameAsync(user, Input.Name.Trim());
             _logger.LogInformation("Account created or renewed; waiting for e-mail verification.");
 
             // No sign-in yet: the account is usable only after the e-mail code is entered
@@ -97,12 +105,21 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                 await _codes.SendCodeAsync(user, CodePurpose.ConfirmEmail);
                 TempData["StatusMessage"] = "Llogaria u krijua. Ju dërguam një kod me 6 shifra në email.";
             }
-            catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException)
+            catch (EmailSendException ex)
             {
                 _logger.LogError(ex, "Verification e-mail could not be sent.");
                 TempData["WarningMessage"] = "Llogaria u krijua, por email-i nuk u dërgua. Provoni “Dërgo kodin përsëri”.";
             }
             return RedirectToPage("./VerifyEmail", new { email = Input.Email, returnUrl });
+        }
+
+        /// <summary>Store (or replace) the full name as a user claim; it ends up in the login cookie</summary>
+        private async Task SaveNameAsync(IdentityUser user, string name)
+        {
+            var claims = await _userManager.GetClaimsAsync(user);
+            var old = claims.Where(c => c.Type == NameClaim).ToList();
+            if (old.Count > 0) await _userManager.RemoveClaimsAsync(user, old);
+            await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim(NameClaim, name));
         }
 
         private IUserEmailStore<IdentityUser> GetEmailStore()

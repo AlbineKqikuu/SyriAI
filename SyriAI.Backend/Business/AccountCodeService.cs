@@ -39,14 +39,16 @@ public class AccountCodeService
     public const int ValidMinutes = 5;
 
     private readonly UserManager<IdentityUser> _users;
-    private readonly SmtpEmailSender _email;
+    private readonly EmailSender _email;
+    private readonly EmailOutbox _outbox;
     private readonly IMemoryCache _cache;
     private readonly ILogger<AccountCodeService> _logger;
 
-    public AccountCodeService(UserManager<IdentityUser> users, SmtpEmailSender email, IMemoryCache cache, ILogger<AccountCodeService> logger)
+    public AccountCodeService(UserManager<IdentityUser> users, EmailSender email, EmailOutbox outbox, IMemoryCache cache, ILogger<AccountCodeService> logger)
     {
         _users = users;
         _email = email;
+        _outbox = outbox;
         _cache = cache;
         _logger = logger;
     }
@@ -60,10 +62,16 @@ public class AccountCodeService
             ? Math.Max(0, (int)Math.Ceiling((until - DateTimeOffset.UtcNow).TotalSeconds))
             : 0;
 
-    /// <summary>Send a new code unless one was sent less than a minute ago. Returns true when sent.</summary>
-    public async Task<bool> SendCodeAsync(IdentityUser user, CodePurpose purpose)
+    /// <summary>True when the last code e-mail to this user could not be sent (it is sent in the background)</summary>
+    public bool LastSendFailed(IdentityUser user) => user.Email is { } email && _outbox.LastSendFailed(email);
+
+    /// <summary>
+    /// Create a new code unless one was sent less than a minute ago, and queue its e-mail (sent in
+    /// the background, so the page answers at once). Returns true when a code was created.
+    /// </summary>
+    public Task<bool> SendCodeAsync(IdentityUser user, CodePurpose purpose)
     {
-        if (SecondsUntilResend(user, purpose) > 0) return false;
+        if (SecondsUntilResend(user, purpose) > 0) return Task.FromResult(false);
 
         var code = NewCode(user, purpose);
         _cache.Set(CodeKey(user, purpose), Hash(code), TimeSpan.FromMinutes(ValidMinutes));
@@ -80,11 +88,11 @@ public class AccountCodeService
             // Local development without SMTP: the code is only visible to whoever runs the server
             _logger.LogWarning("SMTP nuk është konfiguruar — email-i nuk u dërgua. Kodi ({Purpose}) për {Email}: {Code}",
                 purpose, user.Email, code);
-            return true;
+            return Task.FromResult(true);
         }
 
-        await _email.SendEmailAsync(user.Email!, subject, BuildEmail(subject, intro, code));
-        return true;
+        _outbox.Enqueue(user.Email!, subject, BuildEmail(subject, intro, code));
+        return Task.FromResult(true);
     }
 
     /// <summary>Check a code and, if it is right, confirm the e-mail or set the new password.</summary>

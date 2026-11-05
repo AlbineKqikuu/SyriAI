@@ -39,7 +39,7 @@ else
                             KYÇJA (LOGIN)
                         </div>
                         <div class="card-body-custom">
-                            <form method="post" action="/Identity/Account/Login">
+                            <form method="post" action="/Identity/Account/Login" data-busy="Duke hyrë…">
                                 @Html.AntiForgeryToken()
                                 <div class="form-floating mb-3">
                                     <input type="email" name="Input.Email" class="form-control" id="loginEmail" placeholder="email@shembull.com" autocomplete="username" required>
@@ -72,8 +72,12 @@ else
                         </div>
                         <div class="card-body-custom">
                             <!-- autocomplete hints: the browser fills its saved login only into the login form -->
-                            <form method="post" action="/Identity/Account/Register">
+                            <form method="post" action="/Identity/Account/Register" data-busy="Duke u regjistruar…">
                                 @Html.AntiForgeryToken()
+                                <div class="form-floating mb-3">
+                                    <input type="text" name="Input.Name" class="form-control" id="regName" placeholder="Emri dhe mbiemri" autocomplete="name" maxlength="100" required>
+                                    <label for="regName">Emri dhe mbiemri</label>
+                                </div>
                                 <div class="form-floating mb-3">
                                     <input type="email" name="Input.Email" class="form-control" id="regEmail" placeholder="email@shembull.com" autocomplete="off" required>
                                     <label for="regEmail">Email Address</label>

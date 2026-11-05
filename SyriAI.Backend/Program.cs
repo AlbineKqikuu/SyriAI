@@ -68,8 +68,12 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
 
 // E-mail: SMTP settings from configuration (user-secrets), see docs/EMAIL.md
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.Section));
-builder.Services.AddSingleton<SmtpEmailSender>();
-builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());
+builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection(BrevoOptions.Section));
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<EmailSender>();
+builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<EmailSender>());
+builder.Services.AddSingleton<EmailOutbox>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EmailOutbox>());
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<AccountCodeService>();
 
@@ -225,6 +229,13 @@ app.MapGet("/healthz", () => Results.Text("ok"));
 // Studio pages call this every few minutes: the live connection alone does not count as
 // activity, so without it the 20-minute sliding login would expire in the middle of a show
 app.MapGet("/api/ping", () => Results.NoContent()).RequireAuthorization();
+
+// The signed-in user's e-mail and name (the name is given at registration)
+app.MapGet("/api/me", (System.Security.Claims.ClaimsPrincipal user) => Results.Ok(new
+{
+    email = user.Identity?.Name,
+    name = user.FindFirst(SyriAI.Backend.Areas.Identity.Pages.Account.RegisterModel.NameClaim)?.Value,
+})).RequireAuthorization();
 
 app.MapGet("/logout", async (SignInManager<IdentityUser> signInManager) =>
 {

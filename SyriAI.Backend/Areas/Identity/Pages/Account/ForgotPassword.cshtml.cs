@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -38,7 +37,7 @@ namespace SyriAI.Backend.Areas.Identity.Pages.Account
                 {
                     await _codes.SendCodeAsync(user, CodePurpose.ResetPassword); // skipped within the 60 s cooldown
                 }
-                catch (SmtpException ex)
+                catch (EmailSendException ex)
                 {
                     _logger.LogError(ex, "Password reset e-mail could not be sent.");
                     TempData["WarningMessage"] = "Email-i nuk u dërgua. Provoni përsëri pas pak.";

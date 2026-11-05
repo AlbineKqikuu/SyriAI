@@ -314,3 +314,8 @@ a:hover {
     font-size: 0.9rem;
     color: var(--text-muted);
 }
+
+/* Elements shown later by script (e.g. the "e-mail not sent" warning) */
+[hidden] {
+    display: none !important;
+}
