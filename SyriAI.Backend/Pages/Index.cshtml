@@ -42,11 +42,11 @@ else
                             <form method="post" action="/Identity/Account/Login">
                                 @Html.AntiForgeryToken()
                                 <div class="form-floating mb-3">
-                                    <input type="email" name="Input.Email" class="form-control" id="loginEmail" placeholder="email@shembull.com" required>
+                                    <input type="email" name="Input.Email" class="form-control" id="loginEmail" placeholder="email@shembull.com" autocomplete="username" required>
                                     <label for="loginEmail">Email Address</label>
                                 </div>
                                 <div class="form-floating mb-3">
-                                    <input type="password" name="Input.Password" class="form-control" id="loginPass" placeholder="••••••••" required>
+                                    <input type="password" name="Input.Password" class="form-control" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
                                     <label for="loginPass">Password</label>
                                 </div>
                                 <button type="submit" class="btn btn-primary-premium w-100 mt-3">
@@ -71,18 +71,19 @@ else
                             KRIJO LLOGARI
                         </div>
                         <div class="card-body-custom">
+                            <!-- autocomplete hints: the browser fills its saved login only into the login form -->
                             <form method="post" action="/Identity/Account/Register">
                                 @Html.AntiForgeryToken()
                                 <div class="form-floating mb-3">
-                                    <input type="email" name="Input.Email" class="form-control" id="regEmail" placeholder="email@shembull.com" required>
+                                    <input type="email" name="Input.Email" class="form-control" id="regEmail" placeholder="email@shembull.com" autocomplete="off" required>
                                     <label for="regEmail">Email Address</label>
                                 </div>
                                 <div class="form-floating mb-3">
-                                    <input type="password" name="Input.Password" class="form-control" id="regPass" placeholder="••••••••" required>
+                                    <input type="password" name="Input.Password" class="form-control" id="regPass" placeholder="••••••••" autocomplete="new-password" required>
                                     <label for="regPass">Fjalëkalimi</label>
                                 </div>
                                 <div class="form-floating mb-4">
-                                    <input type="password" name="Input.ConfirmPassword" class="form-control" id="regConfirm" placeholder="••••••••" required>
+                                    <input type="password" name="Input.ConfirmPassword" class="form-control" id="regConfirm" placeholder="••••••••" autocomplete="new-password" required>
                                     <label for="regConfirm">Konfirmo Fjalëkalimin</label>
                                 </div>
                                 <button type="submit" class="btn btn-outline-premium w-100">
