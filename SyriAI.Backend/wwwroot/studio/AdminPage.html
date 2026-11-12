@@ -8,7 +8,7 @@
     <!-- Online version (GitHub Pages): require a login first, see js/shared/auth-guard.js -->
     <script src="js/shared/firebase-config.js?v=2"></script>
     <script src="js/shared/auth-guard.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=17">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
     </script>
 </head>
 
-<body>
+<body class="admin">
     <!-- Icon sprite -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
         <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" /></symbol>
@@ -195,21 +195,17 @@
                         <svg class="icon"><use href="#i-eraser" /></svg>
                     </button>
                 </div>
-                <details class="study-fields">
-                    <summary>Të dhënat e studimit <span class="muted">(opsionale)</span></summary>
-                    <div class="study-grid">
-                        <input type="text" id="study-participant" class="text-input" placeholder="ID e pjesëmarrësit (p.sh. P01)" aria-label="ID e pjesëmarrësit">
-                        <select id="study-condition" class="text-input" aria-label="Kushti">
-                            <option value="auto">Kushti: automatik</option>
-                            <option value="voice">Njohje zëri</option>
-                            <option value="autoscroll">Lëvizje automatike</option>
-                            <option value="manual">Manual (tastierë)</option>
-                        </select>
-                        <input type="text" id="study-notes" class="text-input" placeholder="Shënime (opsionale)" aria-label="Shënime">
-                    </div>
-                </details>
             </section>
 
+            <!-- One tab at a time below the live controls (tab switching: inline script at the end) -->
+            <div class="side-tabs" role="tablist" aria-label="Paneli">
+                <button class="side-tab" role="tab" data-pane="script" aria-selected="true">Skripti</button>
+                <button class="side-tab" role="tab" data-pane="show" aria-selected="false">Shfaqja</button>
+                <button class="side-tab" role="tab" data-pane="view" aria-selected="false">Pamja</button>
+                <button class="side-tab" role="tab" data-pane="graphics" aria-selected="false">Grafika</button>
+            </div>
+
+            <div class="side-pane" data-pane="show" role="tabpanel" hidden>
             <!-- Rundown: the stories of the show ("## Title | 1:30" lines in the script), js/admin/show.js -->
             <section class="panel">
                 <div class="panel-head">
@@ -242,9 +238,27 @@
                 </div>
             </section>
 
+            <section class="panel">
+                <details class="study-fields">
+                    <summary>Të dhënat e studimit <span class="muted">(opsionale)</span></summary>
+                    <div class="study-grid">
+                        <input type="text" id="study-participant" class="text-input" placeholder="ID e pjesëmarrësit (p.sh. P01)" aria-label="ID e pjesëmarrësit">
+                        <select id="study-condition" class="text-input" aria-label="Kushti">
+                            <option value="auto">Kushti: automatik</option>
+                            <option value="voice">Njohje zëri</option>
+                            <option value="autoscroll">Lëvizje automatike</option>
+                            <option value="manual">Manual (tastierë)</option>
+                        </select>
+                        <input type="text" id="study-notes" class="text-input" placeholder="Shënime (opsionale)" aria-label="Shënime">
+                    </div>
+                </details>
+            </section>
+            </div>
+
+            <div class="side-pane" data-pane="script" role="tabpanel">
             <!-- 2. Script -->
             <section class="panel">
-                <h2 class="panel-title">Skripti</h2>
+                <h2 class="panel-title visually-hidden">Skripti</h2>
                 <div class="segmented" role="tablist" aria-label="Pamja">
                     <button id="view-text-btn" class="view-mode-btn active" role="tab">
                         <svg class="icon"><use href="#i-text" /></svg>Tekst
@@ -271,6 +285,9 @@
                 <div class="field-meta"><span id="word-count">0 fjalë</span></div>
             </section>
 
+            </div>
+
+            <div class="side-pane" data-pane="view" role="tabpanel" hidden>
             <!-- 3. Reading -->
             <section class="panel">
                 <h2 class="panel-title">Leximi</h2>
@@ -305,21 +322,6 @@
                 </div>
             </section>
 
-            <!-- 4. On-air graphics -->
-            <section class="panel">
-                <h2 class="panel-title">Grafika në ekran</h2>
-                <input type="text" id="headline-input" class="text-input" maxlength="90" placeholder="Titulli i lajmit (p.sh. Qeveria miraton buxhetin 2027)" aria-label="Titulli i lajmit">
-                <button id="toggle-headline-btn" class="btn btn-secondary">
-                    <svg class="icon"><use href="#i-text" /></svg><span class="btn-label">Shfaq titullin</span>
-                </button>
-                <h3 class="panel-subtitle">Emri i prezantuesit</h3>
-                <input type="text" id="lt-name-input" class="text-input" placeholder="Emri Mbiemri" aria-label="Emri">
-                <input type="text" id="lt-title-input" class="text-input" placeholder="Titulli (p.sh. Gazetar)" aria-label="Titulli">
-                <button id="toggle-lt-btn" class="btn btn-secondary">
-                    <svg class="icon"><use href="#i-badge" /></svg><span class="btn-label">Shfaq banerin</span>
-                </button>
-            </section>
-
             <!-- 5. Camera & recording -->
             <section class="panel">
                 <h2 class="panel-title">Kamera &amp; regjistrimi</h2>
@@ -345,6 +347,37 @@
                 <span><kbd>Shift</kbd><kbd>→</kbd> lajmi tjetër</span>
                 <span><kbd>Ctrl</kbd><kbd>S</kbd> ruaj skriptin</span>
                 <span>Komandë zëri: “fillo prompter” / “stop prompter” / “lajmi tjetër”</span>
+            </div>
+            </div>
+
+            <div class="side-pane" data-pane="graphics" role="tabpanel" hidden>
+            <!-- 4. On-air graphics -->
+            <section class="panel">
+                <h2 class="panel-title">Grafika në ekran</h2>
+                <input type="text" id="headline-input" class="text-input" maxlength="90" placeholder="Titulli i lajmit (p.sh. Qeveria miraton buxhetin 2027)" aria-label="Titulli i lajmit">
+                <button id="toggle-headline-btn" class="btn btn-secondary">
+                    <svg class="icon"><use href="#i-text" /></svg><span class="btn-label">Shfaq titullin</span>
+                </button>
+                <h3 class="panel-subtitle">Emri i prezantuesit</h3>
+                <input type="text" id="lt-name-input" class="text-input" placeholder="Emri Mbiemri" aria-label="Emri">
+                <input type="text" id="lt-title-input" class="text-input" placeholder="Titulli (p.sh. Gazetar)" aria-label="Titulli">
+                <button id="toggle-lt-btn" class="btn btn-secondary">
+                    <svg class="icon"><use href="#i-badge" /></svg><span class="btn-label">Shfaq banerin</span>
+                </button>
+            </section>
+
+            <!-- Sponsor bar and "Breaking news" strip on the presenter / YouTube screens (js/admin/settings.js) -->
+            <section class="panel">
+                <h2 class="panel-title">Shiritat në ekran</h2>
+                <label class="field-label" for="sponsors-input">Sponsorët — një për rresht</label>
+                <textarea id="sponsors-input" class="strip-input" rows="4" placeholder="KOMPANIA A"></textarea>
+                <label class="field-label" for="ticker-input">Breaking news — një lajm për rresht</label>
+                <textarea id="ticker-input" class="strip-input" rows="3" placeholder="SOT: ..."></textarea>
+                <button id="save-strips-btn" class="btn btn-secondary">
+                    <svg class="icon"><use href="#i-save" /></svg><span class="btn-label">Ruaj dhe shfaq</span>
+                </button>
+            </section>
+
             </div>
         </aside>
     </main>
@@ -386,13 +419,20 @@
     <script src="js/admin/session.js?v=5"></script>
     <script src="js/admin/show.js?v=1"></script>
     <script src="js/admin/library.js?v=4"></script>
-    <script src="js/admin/settings.js?v=5"></script>
+    <script src="js/admin/settings.js?v=6"></script>
     <script src="js/shared/ink-render.js?v=1"></script>
     <script src="js/admin/ink.js?v=11"></script>
     <script src="js/admin/camera.js?v=18"></script>
     <script src="js/admin/recording.js?v=4"></script>
     <script src="js/admin/graphics.js?v=5"></script>
     <script src="js/admin/main.js?v=12"></script>
+    <script>
+        // Sidebar tabs: show one pane at a time
+        document.querySelectorAll('.side-tab').forEach(tab => tab.addEventListener('click', () => {
+            document.querySelectorAll('.side-tab').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+            document.querySelectorAll('.side-pane').forEach(p => { p.hidden = p.dataset.pane !== tab.dataset.pane; });
+        }));
+    </script>
 </body>
 
 </html>

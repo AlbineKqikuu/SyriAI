@@ -1,273 +1,42 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "SyriAI - Premium Broadcast Suite";
+    ViewData["Title"] = "Teleprompter me inteligjencë artificiale";
 }
 
-@if (User.Identity.IsAuthenticated)
-{
-    <script>
-        window.location.href = "/studio/AdminPage.html";
-    </script>
-    <div class="d-flex flex-column align-items-center justify-content-center min-vh-75 text-center">
-        <div class="spinner-border text-primary mb-4" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <h2 class="text-white fw-bold">Duke hapur Studion...</h2>
+@* Signed-in users are sent to the studio by IndexModel.OnGet; this page is the public front door. *@
+<section class="home">
+    <div class="home-intro">
+        <p class="home-eyebrow">SyriAI Studio</p>
+        <h1>Teleprompteri që ndjek zërin tuaj.</h1>
+        <p class="home-lead">
+            Shkruani ose ngarkoni lajmet, shtypni “Fillo LIVE” dhe teksti lëviz vetë ndërsa flisni,
+            me ekran për prezantuesin dhe dalje direkte për YouTube.
+        </p>
+        <ul class="home-points">
+            <li><strong>Ndjekje me zë</strong><span>Teksti ndalet kur ndaleni, vazhdon kur vazhdoni.</span></li>
+            <li><strong>Rendi i lajmeve</strong><span>Koha për çdo lajm dhe mesazhe nga regjia.</span></li>
+            <li><strong>Grafika në ekran</strong><span>Tituj, baner me emrin dhe efekte kamere.</span></li>
+        </ul>
     </div>
-}
-else
-{
-    <div class="auth-wrapper d-flex align-items-center justify-content-center">
-        <div class="background-decorations">
-            <div class="glow-sphere sphere-1"></div>
-            <div class="glow-sphere sphere-2"></div>
-        </div>
 
-        <div class="container py-5">
-            <div class="text-center mb-5">
-                <h1 class="display-4 fw-800 text-white mb-2">SYRIAI <span class="gradient-accent text-glow">STUDIO</span></h1>
-                <p class="text-muted fs-5">Zgjidhni opsionin tuaj për të hyrë në transmetim</p>
+    <div class="home-card">
+        <h2>Hyr në studio</h2>
+        <form method="post" action="/Identity/Account/Login" data-busy="Duke hyrë…">
+            @Html.AntiForgeryToken()
+            <label for="loginEmail">Email</label>
+            <input type="email" name="Input.Email" id="loginEmail" placeholder="email@shembull.com" autocomplete="username" required>
+
+            <div class="home-row">
+                <label for="loginPass">Fjalëkalimi</label>
+                <a asp-area="Identity" asp-page="/Account/ForgotPassword">Keni harruar?</a>
             </div>
+            <input type="password" name="Input.Password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
 
-            <div class="row g-5 justify-content-center">
-                <!-- Login Card -->
-                <div class="col-lg-5 col-md-10">
-                    <div class="auth-card login-variant">
-                        <div class="card-header-custom">
-                            <i class="bi bi-person-lock me-2"></i>
-                            KYÇJA (LOGIN)
-                        </div>
-                        <div class="card-body-custom">
-                            <form method="post" action="/Identity/Account/Login" data-busy="Duke hyrë…">
-                                @Html.AntiForgeryToken()
-                                <div class="form-floating mb-3">
-                                    <input type="email" name="Input.Email" class="form-control" id="loginEmail" placeholder="email@shembull.com" autocomplete="username" required>
-                                    <label for="loginEmail">Email Address</label>
-                                </div>
-                                <div class="form-floating mb-3">
-                                    <input type="password" name="Input.Password" class="form-control" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
-                                    <label for="loginPass">Password</label>
-                                </div>
-                                <button type="submit" class="btn btn-primary-premium w-100 mt-3">
-                                    <span>HYR NË STUDIO</span>
-                                    <i class="bi bi-chevron-right ms-2"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Vertical Divider (Desktop Only) -->
-                <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
-                    <div class="auth-divider">OSE</div>
-                </div>
-
-                <!-- Register Card -->
-                <div class="col-lg-5 col-md-10">
-                    <div class="auth-card register-variant">
-                        <div class="card-header-custom accent-cyan">
-                            <i class="bi bi-person-plus me-2"></i>
-                            KRIJO LLOGARI
-                        </div>
-                        <div class="card-body-custom">
-                            <!-- autocomplete hints: the browser fills its saved login only into the login form -->
-                            <form method="post" action="/Identity/Account/Register" data-busy="Duke u regjistruar…">
-                                @Html.AntiForgeryToken()
-                                <div class="form-floating mb-3">
-                                    <input type="text" name="Input.Name" class="form-control" id="regName" placeholder="Emri dhe mbiemri" autocomplete="name" maxlength="100" required>
-                                    <label for="regName">Emri dhe mbiemri</label>
-                                </div>
-                                <div class="form-floating mb-3">
-                                    <input type="email" name="Input.Email" class="form-control" id="regEmail" placeholder="email@shembull.com" autocomplete="off" required>
-                                    <label for="regEmail">Email Address</label>
-                                </div>
-                                <div class="form-floating mb-3">
-                                    <input type="password" name="Input.Password" class="form-control" id="regPass" placeholder="••••••••" autocomplete="new-password" required>
-                                    <label for="regPass">Fjalëkalimi</label>
-                                </div>
-                                <div class="form-floating mb-4">
-                                    <input type="password" name="Input.ConfirmPassword" class="form-control" id="regConfirm" placeholder="••••••••" autocomplete="new-password" required>
-                                    <label for="regConfirm">Konfirmo Fjalëkalimin</label>
-                                </div>
-                                <button type="submit" class="btn btn-outline-premium w-100">
-                                    <span>REGJISTROHU TANI</span>
-                                    <i class="bi bi-stars ms-2"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <button type="submit" class="home-btn">Hyr</button>
+        </form>
+        <p class="home-alt">
+            Nuk keni llogari? <a asp-area="Identity" asp-page="/Account/Register">Krijo një llogari</a>
+        </p>
     </div>
-}
-
-<style>
-    :root {
-        --primary-glow: rgba(0, 122, 255, 0.4);
-        --accent-glow: rgba(0, 242, 255, 0.3);
-        --glass-bg: rgba(18, 18, 30, 0.6);
-        --glass-border: rgba(255, 255, 255, 0.08);
-    }
-
-    body {
-        background-color: #050508;
-        overflow-x: hidden;
-    }
-
-    .auth-wrapper {
-        min-height: 90vh;
-        position: relative;
-    }
-
-    .background-decorations {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-        overflow: hidden;
-    }
-
-    .glow-sphere {
-        position: absolute;
-        border-radius: 50%;
-        filter: blur(120px);
-        opacity: 0.2;
-        animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .sphere-1 {
-        width: 600px;
-        height: 600px;
-        background: #007aff;
-        top: -100px;
-        right: -100px;
-    }
-
-    .sphere-2 {
-        width: 500px;
-        height: 500px;
-        background: #5856d6;
-        bottom: -150px;
-        left: -100px;
-    }
-
-    @@keyframes float {
-        0% { transform: translate(0, 0); }
-        100% { transform: translate(50px, 50px); }
-    }
-
-    .fw-800 { font-weight: 800; }
-    .text-glow { text-shadow: 0 0 20px var(--primary-glow); }
-    .gradient-accent {
-        background: linear-gradient(135deg, #fff 0%, #007aff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .auth-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(30px);
-        border: 1px solid var(--glass-border);
-        border-radius: 32px;
-        padding: 40px;
-        height: 100%;
-        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    }
-
-    .auth-card:hover {
-        transform: translateY(-5px);
-        border-color: rgba(255,255,255,0.15);
-    }
-
-    .login-variant:hover { box-shadow: 0 30px 60px rgba(0, 122, 255, 0.2); }
-    .register-variant:hover { box-shadow: 0 30px 60px rgba(88, 86, 214, 0.2); }
-
-    .card-header-custom {
-        font-size: 0.85rem;
-        font-weight: 700;
-        letter-spacing: 2px;
-        color: #007aff;
-        margin-bottom: 30px;
-        text-transform: uppercase;
-        display: flex;
-        align-items: center;
-    }
-
-    .card-header-custom.accent-cyan { color: #5856d6; }
-
-    .form-floating .form-control {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        border-radius: 16px;
-    }
-
-    .form-floating label { color: rgba(255, 255, 255, 0.5); }
-
-    .form-control:focus {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: #007aff;
-        box-shadow: 0 0 15px rgba(0, 122, 255, 0.2);
-    }
-
-    .btn-primary-premium {
-        background: linear-gradient(135deg, #007aff, #00c6ff);
-        border: none;
-        padding: 18px;
-        border-radius: 18px;
-        font-weight: 700;
-        color: white;
-        box-shadow: 0 10px 25px rgba(0, 122, 255, 0.4);
-        transition: all 0.3s ease;
-    }
-
-    .btn-primary-premium:hover {
-        transform: scale(1.02);
-        box-shadow: 0 15px 35px rgba(0, 122, 255, 0.5);
-    }
-
-    .btn-outline-premium {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 18px;
-        border-radius: 18px;
-        font-weight: 700;
-        color: white;
-        transition: all 0.3s ease;
-    }
-
-    .btn-outline-premium:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: #5856d6;
-        color: white;
-    }
-
-    .auth-divider {
-        color: rgba(255, 255, 255, 0.2);
-        font-weight: 800;
-        position: relative;
-        font-size: 0.9rem;
-    }
-
-    .auth-divider::before, .auth-divider::after {
-        content: '';
-        position: absolute;
-        left: 50%;
-        width: 1px;
-        height: 100px;
-        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
-    }
-
-    .auth-divider::before { top: -120px; }
-    .auth-divider::after { bottom: -120px; }
-
-    @@media (max-width: 991px) {
-        .auth-card { margin-bottom: 20px; }
-        .display-4 { font-size: 2.5rem; }
-    }
-</style>
+</section>

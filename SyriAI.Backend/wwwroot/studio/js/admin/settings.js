@@ -8,6 +8,8 @@ const StudioSettings = (() => {
     const themeLightBtn = document.getElementById('theme-light-btn');
     const readingLineBtn = document.getElementById('reading-line-btn');
     const tickerTrack = document.querySelector('.news-ticker .ticker-track');
+    const sponsorsInput = document.getElementById('sponsors-input');
+    const tickerInput = document.getElementById('ticker-input');
 
     let saveTimer = null;
 
@@ -65,6 +67,9 @@ const StudioSettings = (() => {
 
         if (recognition) recognition.lang = s.speechLang;
         renderTicker();
+        // Grafika tab: show the saved lists, unless the user is typing in them
+        if (document.activeElement !== sponsorsInput) sponsorsInput.value = s.sponsors.join('\n');
+        if (document.activeElement !== tickerInput) tickerInput.value = s.ticker.join('\n');
         LiveShow.refresh(); // planned times depend on targetWpm
 
         broadcastUpdate('settings_sync', clientSettings());
@@ -108,6 +113,18 @@ const StudioSettings = (() => {
     fontSizeInput.addEventListener('change', () => update({ fontSize: parseFloat(fontSizeInput.value) }));
     scrollSpeedInput.addEventListener('change', () => update({ scrollSpeed: parseInt(scrollSpeedInput.value, 10) }));
     mirrorBtn.addEventListener('click', () => update({ mirror: document.body.classList.contains('mirrored') }));
+
+    // Grafika tab: sponsor bar and "Breaking news" lines
+    const textLines = (el) => el.value.split('\n').map(l => l.trim()).filter(Boolean);
+    document.getElementById('save-strips-btn').addEventListener('click', () => {
+        const sponsors = textLines(sponsorsInput);
+        const ticker = textLines(tickerInput);
+        update({
+            sponsors: sponsors.length ? sponsors : DEFAULT_SETTINGS.sponsors,
+            ticker: ticker.length ? ticker : DEFAULT_SETTINGS.ticker,
+        });
+        notify('Sponsorët dhe lajmet u ruajtën.', 'success', 2500);
+    });
 
     // ---------- Settings dialog ----------
     function openDialog() {
